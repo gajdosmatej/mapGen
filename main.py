@@ -1,3 +1,3 @@
 import GUI
 
-app = GUI.WindowHandler()
+gui = GUI.WindowHandler()
