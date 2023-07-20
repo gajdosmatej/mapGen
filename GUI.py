@@ -1,4 +1,5 @@
 import tkinter
+import map
 
 class WindowHandler:
 	'''
@@ -8,11 +9,17 @@ class WindowHandler:
 		self.root = tkinter.Tk()
 		self.screen_width = self.root.winfo_screenwidth()
 		self.screen_height = self.root.winfo_screenheight()
-		self.canvas = tkinter.Canvas(self.root, height=0.5*self.screen_height, width=0.5*self.screen_width)
+		self.canv_width = self.screen_width // 2
+		self.canv_height = self.screen_height // 2
+		self.canvas = tkinter.Canvas(self.root, height=self.canv_height, width=self.canv_width)
 		self.canvas.pack()
 
 		self.tile_side_length = 50
-		self.plotTile(200,150, "#006611")
+		#self.plotTile(200,150, "#006611")
+		
+		mapObj = map.Map(self.screen_width//4, self.screen_height//4)
+		mapObj.generate(self)
+
 		tkinter.mainloop()
 
 	def plotTile(self, x_pos, y_pos, background_colour):
