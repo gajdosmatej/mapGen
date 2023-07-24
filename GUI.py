@@ -18,7 +18,12 @@ class WindowHandler:
 		#self.plotTile(200,150, "#006611")
 		
 		mapObj = map.Map(self.screen_width//4, self.screen_height//4)
-		mapObj.generate(self)
+		mapObj.generateGraph(self)
+
+		self.root.bind("<KeyPress-w>", lambda event, gui=self: gui.moveMap(mapObj, 0, -10))
+		self.root.bind("<KeyPress-a>", lambda event, gui=self: gui.moveMap(mapObj, -10, 0))
+		self.root.bind("<KeyPress-s>", lambda event, gui=self: gui.moveMap(mapObj, 0, 10))
+		self.root.bind("<KeyPress-d>", lambda event, gui=self: gui.moveMap(mapObj, 10, 0))
 
 		tkinter.mainloop()
 
@@ -35,5 +40,11 @@ class WindowHandler:
 					x_pos, y_pos+self.tile_side_length,
 					x_pos-0.866*self.tile_side_length, y_pos+0.5*self.tile_side_length,
 					x_pos-0.866*self.tile_side_length, y_pos-0.5*self.tile_side_length]
-		self.canvas.create_polygon(points, outline='black', fill=background_colour, width=2)
-		
+		return self.canvas.create_polygon(points, outline='black', fill=background_colour, width=2)
+	
+	def moveMap(self, mapObject, dx, dy):
+		for tile in mapObject.tileIterator():
+			self.canvas.move(tile.gui_id, dx, dy)
+			tile.x += dx
+			tile.y += dy
+			

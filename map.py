@@ -23,7 +23,10 @@ class Tile:
 		self.colour = None
 
 		#tkinter-canvas hexagon object
-		self.GUI_pointer = None
+		self.gui_id = None
+
+		#noting which tiles were already visited by iterator
+		self.iterator_state = False
 
 
 class Map:
@@ -32,12 +35,34 @@ class Map:
 		self.centre_tile.x = centre_x
 		self.centre_tile.y = centre_y
 	
-	def generate(self, gui):
+	def tileIterator(self):
+		queue = deque()
+		queue.append(self.centre_tile)
+		old_state = self.centre_tile.iterator_state
+		new_state = not old_state
+		self.centre_tile.iterator_state = new_state
+		while queue:
+			tile = queue.popleft()
+			not_visited_tiles = []
+			if tile.w and tile.w.iterator_state == old_state:	not_visited_tiles.append(tile.w)
+			if tile.nw and tile.nw.iterator_state == old_state:	not_visited_tiles.append(tile.nw)
+			if tile.ne and tile.ne.iterator_state == old_state:	not_visited_tiles.append(tile.ne)
+			if tile.e and tile.e.iterator_state == old_state:	not_visited_tiles.append(tile.e)
+			if tile.se and tile.se.iterator_state == old_state:	not_visited_tiles.append(tile.se)
+			if tile.sw and tile.sw.iterator_state == old_state:	not_visited_tiles.append(tile.sw)
+			for new_tile in not_visited_tiles:
+				new_tile.iterator_state = new_state
+				queue.append(new_tile)
+			yield tile
+			
+			
+
+	def generateGraph(self, gui):
 		gen_queue = deque()
 		gen_queue.append(self.centre_tile)
 		while gen_queue:
 			tile = gen_queue.popleft()
-			gui.plotTile(tile.x, tile.y, "#00FF00")
+			tile.gui_id = gui.plotTile(tile.x, tile.y, "#00FF00")
 			if tile.x > 0 and tile.w == None:
 					new_tile = Tile()
 					new_tile.e = tile
@@ -116,6 +141,5 @@ class Map:
 					new_tile.x = tile.x - 0.866*gui.tile_side_length
 					new_tile.y = tile.y + 1.5*gui.tile_side_length
 					gen_queue.append(new_tile)
-
 
 
