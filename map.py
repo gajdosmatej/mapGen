@@ -1,7 +1,7 @@
 from collections import deque
 
 class Tile:
-	def __init__(self):
+	def __init__(self, iterator_state=False):
 		#neighbour compass directions
 		self.e = None
 		self.ne = None
@@ -26,7 +26,7 @@ class Tile:
 		self.gui_id = None
 
 		#noting which tiles were already visited by iterator
-		self.iterator_state = False
+		self.iterator_state = iterator_state
 
 
 class Map:
