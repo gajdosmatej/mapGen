@@ -1,5 +1,6 @@
 import tkinter
 import map
+import numpy
 
 class WindowHandler:
 	'''
@@ -55,6 +56,15 @@ class WindowHandler:
 			if tile.nw == None and tile.ne == None:	upmost_tiles.append(tile)
 			if tile.sw == None and tile.se == None:	downmost_tiles.append(tile)
 		
+		def squareDistCentre(tile):	return (tile.x - self.canv_width/2)**2 + (tile.y - self.canv_height/2)**2
+		curr_dist = squareDistCentre(mapObject.centre_tile)
+		if squareDistCentre(mapObject.centre_tile.w) < curr_dist:	mapObject.centre_tile = mapObject.centre_tile.w
+		if squareDistCentre(mapObject.centre_tile.nw) < curr_dist:	mapObject.centre_tile = mapObject.centre_tile.nw
+		if squareDistCentre(mapObject.centre_tile.ne) < curr_dist:	mapObject.centre_tile = mapObject.centre_tile.ne
+		if squareDistCentre(mapObject.centre_tile.e) < curr_dist:	mapObject.centre_tile = mapObject.centre_tile.e
+		if squareDistCentre(mapObject.centre_tile.se) < curr_dist:	mapObject.centre_tile = mapObject.centre_tile.se
+		if squareDistCentre(mapObject.centre_tile.sw) < curr_dist:	mapObject.centre_tile = mapObject.centre_tile.sw
+
 		for tile in leftmost_tiles:
 			if tile.x > 0:
 				new_tile = map.Tile(iterator_state = tile.iterator_state)
