@@ -70,7 +70,6 @@ class WindowHandler:
 				new_tile = map.Tile(iterator_state = tile.iterator_state)
 				new_tile.x = tile.x - 2*0.866*self.tile_side_length
 				new_tile.y = tile.y
-				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, "#FF0000")
 
 				tile.w = new_tile
 				new_tile.e = tile
@@ -81,12 +80,15 @@ class WindowHandler:
 					tile.sw.nw = new_tile
 					new_tile.se = tile.sw
 
+				new_tile.setAltitude()
+				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, self.getColourFromAltitude(new_tile.altitude))
+
+
 		for tile in rightmost_tiles:
 			if tile.x < self.canv_width:
 				new_tile = map.Tile(iterator_state = tile.iterator_state)
 				new_tile.x = tile.x + 2*0.866*self.tile_side_length
 				new_tile.y = tile.y
-				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, "#FF0000")
 				
 				tile.e = new_tile
 				new_tile.w = tile
@@ -97,12 +99,15 @@ class WindowHandler:
 					tile.se.ne = new_tile
 					new_tile.sw = tile.se 
 
+				new_tile.setAltitude()
+				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, self.getColourFromAltitude(new_tile.altitude))
+
+
 		for tile in upmost_tiles:
 			if tile.y > 0:
 				new_tile = map.Tile(iterator_state = tile.iterator_state)
 				new_tile.x = tile.x - 0.866*self.tile_side_length
 				new_tile.y = tile.y - 1.5*self.tile_side_length
-				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, "#FF0000")
 
 				tile.nw = new_tile
 				new_tile.se = tile
@@ -118,12 +123,15 @@ class WindowHandler:
 					tile.ne.w = new_tile
 					new_tile.e = tile.ne
 
+				new_tile.setAltitude()
+				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, self.getColourFromAltitude(new_tile.altitude))
+
+
 		for tile in downmost_tiles:
 			if tile.y < self.canv_height:
 				new_tile = map.Tile(iterator_state = tile.iterator_state)
 				new_tile.x = tile.x - 0.866*self.tile_side_length
 				new_tile.y = tile.y + 1.5*self.tile_side_length
-				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, "#FF0000")
 
 				tile.sw = new_tile
 				new_tile.ne = tile
@@ -138,3 +146,17 @@ class WindowHandler:
 				if tile.se != None:
 					tile.se.w = new_tile
 					new_tile.e = tile.se
+
+				new_tile.setAltitude()
+				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, self.getColourFromAltitude(new_tile.altitude))
+
+
+	def getColourFromAltitude(self, altitude):
+		if altitude >= 0:
+			val = str(min(int(numpy.floor(100*altitude)), 99))
+			if len(val) == 1:	val = "0" + val
+			return "#00" + val + "00"
+		else:
+			val = str(min(int(numpy.floor(100+100*altitude)), 99))
+			if len(val) == 1:	val = "0" + val
+			return "#0000" + val

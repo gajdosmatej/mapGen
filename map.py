@@ -1,4 +1,5 @@
 from collections import deque
+import numpy
 
 class Tile:
 	def __init__(self, iterator_state=False):
@@ -28,6 +29,18 @@ class Tile:
 		#noting which tiles were already visited by iterator
 		self.iterator_state = iterator_state
 
+	def getExistingNeighbours(self):
+		'''Returns iterator of neighbouring tiles, which are not None.'''
+		neighbours = [self.w, self.nw, self.ne, self.e, self.se, self.sw]
+		return filter(lambda tile: tile != None, neighbours)
+
+
+	def setAltitude(self):
+		existing_neighbours = self.getExistingNeighbours()
+		existing_altitudes = [tile.altitude for tile in existing_neighbours]
+		self.altitude = 0.3*(numpy.random.random()-0.5)
+		if existing_neighbours:
+			self.altitude += sum(existing_altitudes) / len(existing_altitudes)
 
 class Map:
 	def __init__(self, centre_x :int, centre_y :int):
@@ -58,11 +71,13 @@ class Map:
 			
 
 	def generateGraph(self, gui):
+		self.centre_tile.altitude = numpy.random.random()
 		gen_queue = deque()
 		gen_queue.append(self.centre_tile)
 		while gen_queue:
 			tile = gen_queue.popleft()
-			tile.gui_id = gui.plotTile(tile.x, tile.y, "#00FF00")
+			colour = gui.getColourFromAltitude(tile.altitude)
+			tile.gui_id = gui.plotTile(tile.x, tile.y, colour)
 			if tile.x > 0 and tile.w == None:
 					new_tile = Tile()
 					new_tile.e = tile
@@ -75,6 +90,7 @@ class Map:
 						new_tile.se = tile.sw
 					new_tile.x = tile.x - 2*0.866*gui.tile_side_length
 					new_tile.y = tile.y
+					new_tile.setAltitude()
 					gen_queue.append(new_tile)
 			if tile.x > 0 and tile.y > 0 and tile.nw == None:
 					new_tile = Tile()
@@ -88,6 +104,7 @@ class Map:
 						new_tile.e = tile.ne
 					new_tile.x = tile.x - 0.866*gui.tile_side_length
 					new_tile.y = tile.y - 1.5*gui.tile_side_length
+					new_tile.setAltitude()
 					gen_queue.append(new_tile)
 			if tile.x < gui.canv_width and tile.y > 0 and tile.ne == None:
 					new_tile = Tile()
@@ -101,6 +118,7 @@ class Map:
 						new_tile.w = tile.nw
 					new_tile.x = tile.x + 0.866*gui.tile_side_length
 					new_tile.y = tile.y - 1.5*gui.tile_side_length
+					new_tile.setAltitude()
 					gen_queue.append(new_tile)
 			if tile.x < gui.canv_width and tile.e == None:
 				new_tile = Tile()
@@ -114,6 +132,7 @@ class Map:
 					new_tile.sw = tile.se
 				new_tile.x = tile.x + 2*0.866*gui.tile_side_length
 				new_tile.y = tile.y
+				new_tile.setAltitude()
 				gen_queue.append(new_tile)
 			if tile.x < gui.canv_width and tile.y < gui.canv_height and tile.se == None:
 					new_tile = Tile()
@@ -127,6 +146,7 @@ class Map:
 						new_tile.w = tile.sw
 					new_tile.x = tile.x + 0.866*gui.tile_side_length
 					new_tile.y = tile.y + 1.5*gui.tile_side_length
+					new_tile.setAltitude()
 					gen_queue.append(new_tile)
 			if tile.x > 0 and tile.y < gui.canv_height and tile.sw == None:
 					new_tile = Tile()
@@ -140,6 +160,7 @@ class Map:
 						new_tile.e = tile.se
 					new_tile.x = tile.x - 0.866*gui.tile_side_length
 					new_tile.y = tile.y + 1.5*gui.tile_side_length
+					new_tile.setAltitude()
 					gen_queue.append(new_tile)
 
 
