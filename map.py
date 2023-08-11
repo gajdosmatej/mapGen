@@ -50,8 +50,9 @@ class Map:
 		self.centre_tile.x = centre_x
 		self.centre_tile.y = centre_y
 	
-	def tileIterator(self):
+	def tileIterator(self, active_only = False, gui = None):	#active_only ... those that are rendered
 		queue = deque()
+		def conditionFunc(tile):	return (not active_only) or ((0 < tile.x < gui.screen_width) and (0 < tile.y < gui.screen_height)) 
 		queue.append(self.centre_tile)
 		old_state = self.centre_tile.iterator_state
 		new_state = not old_state
@@ -59,17 +60,16 @@ class Map:
 		while queue:
 			tile = queue.popleft()
 			not_visited_tiles = []
-			if tile.w and tile.w.iterator_state == old_state:	not_visited_tiles.append(tile.w)
-			if tile.nw and tile.nw.iterator_state == old_state:	not_visited_tiles.append(tile.nw)
-			if tile.ne and tile.ne.iterator_state == old_state:	not_visited_tiles.append(tile.ne)
-			if tile.e and tile.e.iterator_state == old_state:	not_visited_tiles.append(tile.e)
-			if tile.se and tile.se.iterator_state == old_state:	not_visited_tiles.append(tile.se)
-			if tile.sw and tile.sw.iterator_state == old_state:	not_visited_tiles.append(tile.sw)
+			if tile.w and tile.w.iterator_state == old_state and conditionFunc(tile.w):	not_visited_tiles.append(tile.w)
+			if tile.nw and tile.nw.iterator_state == old_state and conditionFunc(tile.nw):	not_visited_tiles.append(tile.nw)
+			if tile.ne and tile.ne.iterator_state == old_state and conditionFunc(tile.ne):	not_visited_tiles.append(tile.ne)
+			if tile.e and tile.e.iterator_state == old_state and conditionFunc(tile.e):	not_visited_tiles.append(tile.e)
+			if tile.se and tile.se.iterator_state == old_state and conditionFunc(tile.se):	not_visited_tiles.append(tile.se)
+			if tile.sw and tile.sw.iterator_state == old_state and conditionFunc(tile.sw):	not_visited_tiles.append(tile.sw)
 			for new_tile in not_visited_tiles:
 				new_tile.iterator_state = new_state
 				queue.append(new_tile)
 			yield tile
-			
 	
 	def updateSandpiles(self, tiles):
 		for tile in tiles:
