@@ -36,11 +36,13 @@ class Tile:
 
 
 	def setAltitude(self):
-		existing_neighbours = self.getExistingNeighbours()
+		'''existing_neighbours = self.getExistingNeighbours()
 		existing_altitudes = [tile.altitude for tile in existing_neighbours]
 		self.altitude = 0.3*(numpy.random.random()-0.5)
 		if existing_neighbours:
 			self.altitude += sum(existing_altitudes) / len(existing_altitudes)
+		'''
+		self.altitude = numpy.random.uniform(-1,1)
 
 class Map:
 	def __init__(self, centre_x :int, centre_y :int):
@@ -68,7 +70,19 @@ class Map:
 				queue.append(new_tile)
 			yield tile
 			
-			
+	
+	def updateSandpiles(self, tiles):
+		for tile in tiles:
+			neighbours = tile.getExistingNeighbours()
+			'''lower_neighbours = list(filter(lambda n: n.altitude < tile.altitude-0.2, neighbours))
+			tile.altitude -= 0.05*len(lower_neighbours)
+			for neighbour in lower_neighbours:
+				neighbour.altitude += 0.05
+			'''
+			for neighbour in neighbours:
+				diff = (neighbour.altitude - tile.altitude) / 2
+				#neighbour.altitude, tile.altitude = neighbour.altitude - 0.5*diff, tile.altitude + 0.5*diff
+				tile.altitude += 0.5*diff
 
 	def generateGraph(self, gui):
 		self.centre_tile.altitude = numpy.random.random()
@@ -76,8 +90,6 @@ class Map:
 		gen_queue.append(self.centre_tile)
 		while gen_queue:
 			tile = gen_queue.popleft()
-			colour = gui.getColourFromAltitude(tile.altitude)
-			tile.gui_id = gui.plotTile(tile.x, tile.y, colour)
 			if tile.x > 0 and tile.w == None:
 					new_tile = Tile()
 					new_tile.e = tile
@@ -162,5 +174,10 @@ class Map:
 					new_tile.y = tile.y + 1.5*gui.tile_side_length
 					new_tile.setAltitude()
 					gen_queue.append(new_tile)
+		for _ in range(4):	
+			self.updateSandpiles(self.tileIterator())
+		for tile in self.tileIterator():	#VYKRESLOVANI PRESUNUTO SEM
+			colour = gui.getColourFromAltitude(tile.altitude)
+			tile.gui_id = gui.plotTile(tile.x, tile.y, colour)
 
 

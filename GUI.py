@@ -1,5 +1,5 @@
 import tkinter
-import map
+from map import Map, Tile
 import numpy
 
 class WindowHandler:
@@ -15,10 +15,10 @@ class WindowHandler:
 		self.canvas = tkinter.Canvas(self.root, height=self.canv_height, width=self.canv_width)
 		self.canvas.pack()
 
-		self.tile_side_length = 50
+		self.tile_side_length = 25
 		#self.plotTile(200,150, "#006611")
 		
-		mapObj = map.Map(self.screen_width//4, self.screen_height//4)
+		mapObj = Map(self.screen_width//4, self.screen_height//4)
 		mapObj.generateGraph(self)
 
 		self.root.bind("<KeyPress-w>", lambda event, gui=self: gui.moveMap(mapObj, 0, 10))
@@ -65,9 +65,11 @@ class WindowHandler:
 		if squareDistCentre(mapObject.centre_tile.se) < curr_dist:	mapObject.centre_tile = mapObject.centre_tile.se
 		if squareDistCentre(mapObject.centre_tile.sw) < curr_dist:	mapObject.centre_tile = mapObject.centre_tile.sw
 
+		new_tiles = []
+
 		for tile in leftmost_tiles:
 			if tile.x > 0:
-				new_tile = map.Tile(iterator_state = tile.iterator_state)
+				new_tile = Tile(iterator_state = tile.iterator_state)
 				new_tile.x = tile.x - 2*0.866*self.tile_side_length
 				new_tile.y = tile.y
 
@@ -81,12 +83,11 @@ class WindowHandler:
 					new_tile.se = tile.sw
 
 				new_tile.setAltitude()
-				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, self.getColourFromAltitude(new_tile.altitude))
-
+				new_tiles.append(new_tile)
 
 		for tile in rightmost_tiles:
 			if tile.x < self.canv_width:
-				new_tile = map.Tile(iterator_state = tile.iterator_state)
+				new_tile = Tile(iterator_state = tile.iterator_state)
 				new_tile.x = tile.x + 2*0.866*self.tile_side_length
 				new_tile.y = tile.y
 				
@@ -100,12 +101,12 @@ class WindowHandler:
 					new_tile.sw = tile.se 
 
 				new_tile.setAltitude()
-				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, self.getColourFromAltitude(new_tile.altitude))
+				new_tiles.append(new_tile)
 
 
 		for tile in upmost_tiles:
 			if tile.y > 0:
-				new_tile = map.Tile(iterator_state = tile.iterator_state)
+				new_tile = Tile(iterator_state = tile.iterator_state)
 				new_tile.x = tile.x - 0.866*self.tile_side_length
 				new_tile.y = tile.y - 1.5*self.tile_side_length
 
@@ -124,12 +125,11 @@ class WindowHandler:
 					new_tile.e = tile.ne
 
 				new_tile.setAltitude()
-				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, self.getColourFromAltitude(new_tile.altitude))
-
+				new_tiles.append(new_tile)
 
 		for tile in downmost_tiles:
 			if tile.y < self.canv_height:
-				new_tile = map.Tile(iterator_state = tile.iterator_state)
+				new_tile = Tile(iterator_state = tile.iterator_state)
 				new_tile.x = tile.x - 0.866*self.tile_side_length
 				new_tile.y = tile.y + 1.5*self.tile_side_length
 
@@ -148,15 +148,20 @@ class WindowHandler:
 					new_tile.e = tile.se
 
 				new_tile.setAltitude()
-				new_tile.gui_id = self.plotTile(new_tile.x, new_tile.y, self.getColourFromAltitude(new_tile.altitude))
+				new_tiles.append(new_tile)
+		
+		for _ in range(4):	mapObject.updateSandpiles(new_tiles)
+		for tile in new_tiles:
+			tile.gui_id = self.plotTile(tile.x, tile.y, self.getColourFromAltitude(tile.altitude))
 
 
 	def getColourFromAltitude(self, altitude):
 		if altitude >= 0:
-			val = str(min(int(numpy.floor(100*altitude)), 99))
+			val = str(min(int(numpy.floor(100*altitude)), 79) + 10)
 			if len(val) == 1:	val = "0" + val
 			return "#00" + val + "00"
 		else:
-			val = str(min(int(numpy.floor(100+100*altitude)), 99))
+			'''val = str(min(int(numpy.floor(100+100*altitude)), 99))
 			if len(val) == 1:	val = "0" + val
-			return "#0000" + val
+			return "#0000" + val'''
+			return "#0022BB"
