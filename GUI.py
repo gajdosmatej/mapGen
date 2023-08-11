@@ -28,21 +28,27 @@ class WindowHandler:
 
 		tkinter.mainloop()
 
-	def plotTile(self, x_pos, y_pos, background_colour):
+	def plotTile(self, tile, background_colour):
 		'''
 		Plot hexagon tile to the WindowHandler's canvas.
-		@x_pos: Pixel x position of the hexagon centre.
-		@y_pos: Pixel y position of the hexagon centre.
-		@background_colour: Fill colour of the tile.
 		'''
-		points = [	x_pos, y_pos-self.tile_side_length,
-					x_pos+0.866*self.tile_side_length, y_pos-0.5*self.tile_side_length,
-					x_pos+0.866*self.tile_side_length, y_pos+0.5*self.tile_side_length,
-					x_pos, y_pos+self.tile_side_length,
-					x_pos-0.866*self.tile_side_length, y_pos+0.5*self.tile_side_length,
-					x_pos-0.866*self.tile_side_length, y_pos-0.5*self.tile_side_length]
-		return self.canvas.create_polygon(points, outline='black', fill=background_colour, width=2)
+		points = [	tile.x, tile.y-self.tile_side_length,
+					tile.x+0.866*self.tile_side_length, tile.y-0.5*self.tile_side_length,
+					tile.x+0.866*self.tile_side_length, tile.y+0.5*self.tile_side_length,
+					tile.x, tile.y+self.tile_side_length,
+					tile.x-0.866*self.tile_side_length, tile.y+0.5*self.tile_side_length,
+					tile.x-0.866*self.tile_side_length, tile.y-0.5*self.tile_side_length]		
+		tile.gui_active = True
+		tile.gui_id = self.canvas.create_polygon(points, outline='black', fill=background_colour, width=2)
+
+	def hideTile(self, tile):
+		self.canvas.delete(tile.gui_id)
+		tile.gui_active = False
 	
+	def isTileOnScreen(self, tile):
+		offset_delta = self.tile_side_length
+		return (-offset_delta < tile.x < self.screen_width+offset_delta and -offset_delta < tile.y < self.screen_height+offset_delta)
+
 	def moveMap(self, mapObject, dx, dy):
 		leftmost_tiles, rightmost_tiles, upmost_tiles, downmost_tiles = [], [], [], []
 
@@ -51,6 +57,10 @@ class WindowHandler:
 			tile.x += dx
 			tile.y += dy
 
+			if not self.isTileOnScreen(tile):	#deactivate tile that is off the screen
+				self.hideTile(tile)
+			elif not tile.gui_active:
+				self.plotTile(tile, self.getColourFromAltitude(tile.altitude))
 			if tile.w == None:	leftmost_tiles.append(tile)
 			if tile.e == None:	rightmost_tiles.append(tile)
 			if tile.nw == None and tile.ne == None:	upmost_tiles.append(tile)
@@ -150,9 +160,9 @@ class WindowHandler:
 				new_tile.setAltitude()
 				new_tiles.append(new_tile)
 		
-		for _ in range(4):	mapObject.updateSandpiles(new_tiles)
+		for _ in range(4):	mapObject.updateSandpiles(new_tiles)	#rozumnejsi tvar terenu
 		for tile in new_tiles:
-			tile.gui_id = self.plotTile(tile.x, tile.y, self.getColourFromAltitude(tile.altitude))
+			self.plotTile(tile, self.getColourFromAltitude(tile.altitude))	#GUI plotting
 
 
 	def getColourFromAltitude(self, altitude):

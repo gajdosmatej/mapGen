@@ -29,6 +29,9 @@ class Tile:
 		#noting which tiles were already visited by iterator
 		self.iterator_state = iterator_state
 
+		#is plotted on canvas
+		self.gui_active = False
+
 	def getExistingNeighbours(self):
 		'''Returns iterator of neighbouring tiles, which are not None.'''
 		neighbours = [self.w, self.nw, self.ne, self.e, self.se, self.sw]
@@ -178,6 +181,6 @@ class Map:
 			self.updateSandpiles(self.tileIterator())
 		for tile in self.tileIterator():	#VYKRESLOVANI PRESUNUTO SEM
 			colour = gui.getColourFromAltitude(tile.altitude)
-			tile.gui_id = gui.plotTile(tile.x, tile.y, colour)
+			gui.plotTile(tile, colour)
 
 
