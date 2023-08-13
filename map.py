@@ -2,6 +2,7 @@ from collections import deque
 import numpy
 
 class Tile:
+	side_length = 25
 	def __init__(self, iterator_state=False):
 		#neighbour compass directions
 		self.e = None
@@ -74,18 +75,31 @@ class Map:
 				queue.append(new_tile)
 			yield tile
 	
-	def updateSandpiles(self, tiles):
+	def updateCentreTile(self, centre_x :float, centre_y :float):
+		'''
+		Checks, whether there is a tile that is closer to the canvas centre than the current centre_tile. If there is that tile, it becomes new centre_tile.
+		@centre_x ... Canvas' centre x position.
+		@centre_y ... Canvas' centre y position.
+		'''
+		#squared standard euclidean distance from the canvas' centre
+		def squareDistCentre(tile):	return (tile.x - centre_x)**2 + (tile.y - centre_y)**2
+		curr_dist = squareDistCentre(self.centre_tile)
+		
+		#go through the current centre_tile's neighbours, if a neighbour is closer to the canvas centre, make it the new centre_tile
+		for neighbour in self.centre_tile.getExistingNeighbours():
+			if squareDistCentre(neighbour) < curr_dist:	
+				self.centre_tile = neighbour
+				curr_dist = squareDistCentre(neighbour)
+
+
+	def updateSandpiles(self, tiles :list[Tile]):
+		'''
+		Make the altitudes of @tiles more smooth by averaging tile altitude with its neighbours' altitudes.
+		@tiles ... List of tiles, which altitudes are being updated. 
+		'''
 		for tile in tiles:
-			neighbours = tile.getExistingNeighbours()
-			'''lower_neighbours = list(filter(lambda n: n.altitude < tile.altitude-0.2, neighbours))
-			tile.altitude -= 0.05*len(lower_neighbours)
-			for neighbour in lower_neighbours:
-				neighbour.altitude += 0.05
-			'''
-			for neighbour in neighbours:
-				diff = (neighbour.altitude - tile.altitude) / 2
-				#neighbour.altitude, tile.altitude = neighbour.altitude - 0.5*diff, tile.altitude + 0.5*diff
-				tile.altitude += 0.5*diff
+			for neighbour in tile.getExistingNeighbours():
+				tile.altitude = (tile.altitude + 0.5*neighbour.altitude) / 1.5
 
 	def generateGraph(self, gui):
 		self.centre_tile.altitude = numpy.random.random()
@@ -103,7 +117,7 @@ class Map:
 					if tile.sw != None:	
 						tile.sw.nw = new_tile
 						new_tile.se = tile.sw
-					new_tile.x = tile.x - 2*0.866*gui.tile_side_length
+					new_tile.x = tile.x - 2*0.866*tile.side_length
 					new_tile.y = tile.y
 					new_tile.setAltitude()
 					gen_queue.append(new_tile)
@@ -117,8 +131,8 @@ class Map:
 					if tile.ne != None:
 						tile.ne.w = new_tile
 						new_tile.e = tile.ne
-					new_tile.x = tile.x - 0.866*gui.tile_side_length
-					new_tile.y = tile.y - 1.5*gui.tile_side_length
+					new_tile.x = tile.x - 0.866*tile.side_length
+					new_tile.y = tile.y - 1.5*tile.side_length
 					new_tile.setAltitude()
 					gen_queue.append(new_tile)
 			if tile.x < gui.canv_width and tile.y > 0 and tile.ne == None:
@@ -131,8 +145,8 @@ class Map:
 					if tile.nw != None:
 						tile.nw.e = new_tile
 						new_tile.w = tile.nw
-					new_tile.x = tile.x + 0.866*gui.tile_side_length
-					new_tile.y = tile.y - 1.5*gui.tile_side_length
+					new_tile.x = tile.x + 0.866*tile.side_length
+					new_tile.y = tile.y - 1.5*tile.side_length
 					new_tile.setAltitude()
 					gen_queue.append(new_tile)
 			if tile.x < gui.canv_width and tile.e == None:
@@ -145,7 +159,7 @@ class Map:
 				if tile.se != None:
 					tile.se.ne = new_tile
 					new_tile.sw = tile.se
-				new_tile.x = tile.x + 2*0.866*gui.tile_side_length
+				new_tile.x = tile.x + 2*0.866*tile.side_length
 				new_tile.y = tile.y
 				new_tile.setAltitude()
 				gen_queue.append(new_tile)
@@ -159,8 +173,8 @@ class Map:
 					if tile.sw != None:
 						tile.sw.e = new_tile
 						new_tile.w = tile.sw
-					new_tile.x = tile.x + 0.866*gui.tile_side_length
-					new_tile.y = tile.y + 1.5*gui.tile_side_length
+					new_tile.x = tile.x + 0.866*tile.side_length
+					new_tile.y = tile.y + 1.5*tile.side_length
 					new_tile.setAltitude()
 					gen_queue.append(new_tile)
 			if tile.x > 0 and tile.y < gui.canv_height and tile.sw == None:
@@ -173,14 +187,12 @@ class Map:
 					if tile.se != None:
 						tile.se.w = new_tile
 						new_tile.e = tile.se
-					new_tile.x = tile.x - 0.866*gui.tile_side_length
-					new_tile.y = tile.y + 1.5*gui.tile_side_length
+					new_tile.x = tile.x - 0.866*tile.side_length
+					new_tile.y = tile.y + 1.5*tile.side_length
 					new_tile.setAltitude()
 					gen_queue.append(new_tile)
 		for _ in range(4):	
 			self.updateSandpiles(self.tileIterator())
-		for tile in self.tileIterator():	#VYKRESLOVANI PRESUNUTO SEM
-			colour = gui.getColourFromAltitude(tile.altitude)
-			gui.plotTile(tile, colour)
+
 
 
