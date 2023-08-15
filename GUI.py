@@ -24,6 +24,7 @@ class WindowHandler:
 
 		#plot all the newly created tiles
 		for tile in mapObj.tileIterator():
+			tile.activate()
 			self.plotTile(tile, self.getColourOfTile(tile))
 
 		#create triggers that will move the map when WASD keyboard keys are pressed
@@ -47,7 +48,6 @@ class WindowHandler:
 					tile.x, tile.y+tile.side_length,
 					tile.x-0.866*tile.side_length, tile.y+0.5*tile.side_length,
 					tile.x-0.866*tile.side_length, tile.y-0.5*tile.side_length]		
-		tile.gui_active = True
 		tile.gui_id = self.canvas.create_polygon(points, outline='black', fill=background_colour, width=2)
 
 	def hideTile(self, tile :Tile):
@@ -56,7 +56,6 @@ class WindowHandler:
 		@tile ... Tile object which is being removed from the canvas.
 		'''
 		self.canvas.delete(tile.gui_id)
-		tile.gui_active = False
 	
 	def isTileOnScreen(self, tile :Tile) -> bool:
 		'''
@@ -64,7 +63,7 @@ class WindowHandler:
 		@tile ... Tile object which coordinates are being considered.
 		'''
 		offset_delta = tile.side_length
-		return (-offset_delta < tile.x < self.screen_width+offset_delta and -offset_delta < tile.y < self.screen_height+offset_delta)
+		return (-offset_delta < tile.x < self.canv_width+offset_delta and -offset_delta < tile.y < self.canv_height+offset_delta)
 
 	def moveTiles(self, mapObject :Map, dx :float, dy :float) -> dict[list[Tile]]:
 		'''
@@ -74,29 +73,96 @@ class WindowHandler:
 		@dy ... The y coordinate of the moving direction vector.
 		'''
 		boundary_tiles = {"left": [], "up": [], "right": [], "down": []}
-		
+		to_activate = set()
+		to_deactivate = set()
+
 		#go through every tile on the map
-		for tile in mapObject.tileIterator():
+		for tile in mapObject.tileIterator(active_only=True):
 			#move the tile's coordinates
 			tile.x += dx
 			tile.y += dy
 
+			'''
 			#deactivate tile that is off the screen and remove it from the canvas
 			if not self.isTileOnScreen(tile):
 				self.hideTile(tile)
+				tile.deactivate()
 			#activate tile that is on the screen and plot it on the canvas
 			elif not tile.gui_active:
+				tile.activate()
 				self.plotTile(tile, self.getColourOfTile(tile))
 			#move tile plot on the canvas
 			else:
 				self.canvas.move(tile.gui_id, dx, dy)
-			
+			'''
+			self.canvas.move(tile.gui_id, dx, dy)
+
+			if not self.isTileOnScreen(tile):
+				to_deactivate.add(tile)
+				#tile.deactivate()
+				#self.hideTile(tile)
+				#pass
+			else:
+				'''neighbours = tile.getExistingNeighbours()
+				for neighbour in neighbours:
+					if not neighbour.gui_active and self.isTileOnScreen(tile):
+						to_activate.append(neighbour)
+						#pass'''
+				neighbours = [tile.w, tile.nw, tile.ne, tile.e, tile.se, tile.sw]
+				delta_xs = [-2*0.866, -0.866, 0.866, 2*0.866, 0.866, -0.866]
+				delta_ys = [0, -1.5, -1.5, 0, 1.5, 1.5]
+				for i in range(6):
+					if neighbours[i] != None and not neighbours[i].gui_active:
+						neighbours[i].x = tile.x + delta_xs[i]*tile.side_length
+						neighbours[i].y = tile.y + delta_ys[i]*tile.side_length
+						if self.isTileOnScreen(neighbours[i]):
+							to_activate.add(neighbours[i])
+							neighbours[i].iterator_state = tile.iterator_state
+							#neighbours[i].activate()
+							#self.plotTile(neighbours[i], self.getColourOfTile(neighbours[i]))
+
 			#determine, whether the tile lies on the map boundary_tiles
-			if tile.w == None:	boundary_tiles["left"].append(tile)
-			if tile.e == None:	boundary_tiles["right"].append(tile)
-			if tile.nw == None and tile.ne == None:	boundary_tiles["up"].append(tile)
-			if tile.sw == None and tile.se == None:	boundary_tiles["down"].append(tile)	
+			'''if tile.w == None and tile.gui_active:	boundary_tiles["left"].append(tile)
+			if tile.e == None and tile.gui_active:	boundary_tiles["right"].append(tile)
+			if tile.nw == None and tile.ne == None and tile.gui_active:	boundary_tiles["up"].append(tile)
+			if tile.sw == None and tile.se == None and tile.gui_active:	boundary_tiles["down"].append(tile)	
+			'''
 		
+		for tile in to_activate:
+			if not tile.gui_active:
+				tile.activate()
+				'''if tile.w != None and tile.w.gui_active:
+					tile.x = tile.w.x + 2*0.866*tile.side_length
+					tile.y = tile.w.y
+					tile.iterator_state = tile.w.iterator_state
+				elif tile.nw != None and tile.nw.gui_active:
+					tile.x = tile.nw.x + 0.866*tile.side_length
+					tile.y = tile.nw.y + 1.5*tile.side_length
+					tile.iterator_state = tile.nw.iterator_state
+				elif tile.ne != None and tile.ne.gui_active:
+					tile.x = tile.ne.x - 0.866*tile.side_length
+					tile.y = tile.ne.y + 1.5*tile.side_length
+					tile.iterator_state = tile.ne.iterator_state
+				elif tile.e != None and tile.e.gui_active:
+					tile.x = tile.e.x - 2*0.866*tile.side_length
+					tile.y = tile.e.y
+					tile.iterator_state = tile.e.iterator_state
+				elif tile.se != None and tile.se.gui_active:
+					tile.x = tile.se.x - 0.866*tile.side_length
+					tile.y = tile.se.y - 1.5*tile.side_length
+					tile.iterator_state = tile.se.iterator_state
+				elif tile.sw != None and tile.sw.gui_active:
+					tile.x = tile.sw.x + 0.866*tile.side_length
+					tile.y = tile.sw.y - 1.5*tile.side_length
+					tile.iterator_state = tile.sw.iterator_state
+				else:
+					raise Exception'''
+				self.plotTile(tile, self.getColourOfTile(tile))
+
+		for tile in to_deactivate:
+			if tile.gui_active:
+				tile.deactivate()
+				self.hideTile(tile)
 		return boundary_tiles
 
 	def updateBoundaries(self, boundary_tiles :dict[list[Tile]]) -> list[Tile]:
@@ -211,6 +277,7 @@ class WindowHandler:
 		
 		#plot the newly created tiles
 		for tile in new_tiles:
+			tile.activate()
 			self.plotTile(tile, self.getColourOfTile(tile))
 
 
