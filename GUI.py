@@ -75,6 +75,7 @@ class WindowHandler:
 		boundary_tiles = {"left": [], "up": [], "right": [], "down": []}
 		to_activate = set()
 		to_deactivate = set()
+		need_new_layer = False
 
 		#go through every tile on the map
 		for tile in mapObject.tileIterator(active_only=True):
@@ -121,6 +122,9 @@ class WindowHandler:
 							#neighbours[i].activate()
 							#self.plotTile(neighbours[i], self.getColourOfTile(neighbours[i]))
 
+			if len(list(tile.getExistingNeighbours())) < 6:
+				need_new_layer = True
+
 			#determine, whether the tile lies on the map boundary_tiles
 			'''if tile.w == None and tile.gui_active:	boundary_tiles["left"].append(tile)
 			if tile.e == None and tile.gui_active:	boundary_tiles["right"].append(tile)
@@ -163,6 +167,10 @@ class WindowHandler:
 			if tile.gui_active:
 				tile.deactivate()
 				self.hideTile(tile)
+		
+		if need_new_layer:	
+			new_tiles = mapObject.generateNecessaryLayers(self, mapObject.centre_tile.iterator_state)
+			for _ in range(5):	mapObject.updateSandpiles(new_tiles)
 		return boundary_tiles
 
 	def updateBoundaries(self, boundary_tiles :dict[list[Tile]]) -> list[Tile]:

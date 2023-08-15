@@ -2,7 +2,7 @@ from collections import deque
 import numpy
 
 class Tile:
-	side_length = 30
+	side_length = 12
 	def __init__(self, iterator_state=False):
 		#neighbour compass directions
 		self.e = None
@@ -69,7 +69,6 @@ class Map:
 		new_state = not old_state
 		self.centre_tile.iterator_state = new_state
 
-		TESTING_COUNTER = 0
 		while queue:
 			tile = queue.popleft()
 			not_visited_tiles = []
@@ -83,8 +82,7 @@ class Map:
 				new_tile.iterator_state = new_state
 				queue.append(new_tile)
 			yield tile
-			TESTING_COUNTER += 1
-		print(TESTING_COUNTER)
+
 
 	def updateCentreTile(self, centre_x :float, centre_y :float):
 		'''
@@ -261,10 +259,25 @@ class Map:
 		se.setAltitude()
 		sw.setAltitude()
 
-		for _ in range(200):
-			self.generateNewLayer(gui)
+		self.generateNecessaryLayers(gui)
+		
+		for _ in range(5):
+			self.updateSandpiles(self.tileIterator())
 
-	def generateNewLayer(self, gui):
+	def generateNecessaryLayers(self, gui, iterator_state = False):
+		all_new_tiles = []
+		need_new_layer = True
+		while need_new_layer:
+			layer_new_tiles = self.generateNewLayer(iterator_state)
+			need_new_layer = False
+			for tile in layer_new_tiles:
+				if gui.isTileOnScreen(tile):	
+					need_new_layer = True
+					break
+			all_new_tiles += layer_new_tiles
+		return all_new_tiles
+
+	def generateNewLayer(self, iterator_state = False):
 		new_tiles = []
 		start = self.centre_tile
 		while start.w != None:
@@ -292,14 +305,17 @@ class Map:
 							found = True
 							break
 		
+		unique_new_tiles = []
 		x_offsets = [-2*0.866, -0.866, 0.866, 2*0.866, 0.866, -0.866]
 		y_offsets = [0, -1.5, -1.5, 0, 1.5, 1.5]
 		for creator_tile, index in new_tiles:
 			if indexToNeighbour(creator_tile, index) == None:
 				new_tile = Tile()
+				new_tile.iterator_state = iterator_state
 				new_tile.x = creator_tile.x + x_offsets[index]*new_tile.side_length
 				new_tile.y = creator_tile.y + y_offsets[index]*new_tile.side_length
 				new_tile.setAltitude()
+				unique_new_tiles.append(new_tile)
 				#gui.plotTile(new_tile, gui.getColourOfTile(new_tile))
 				#i = input()
 			else:
@@ -363,4 +379,5 @@ class Map:
 				if creator_tile.w != None:
 					creator_tile.w.se = new_tile
 					new_tile.nw = creator_tile.w
-				
+
+		return unique_new_tiles
