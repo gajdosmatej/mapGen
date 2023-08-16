@@ -109,100 +109,7 @@ class Map:
 		for tile in tiles:
 			for neighbour in tile.getExistingNeighbours():
 				tile.altitude = (tile.altitude + 0.5*neighbour.altitude) / 1.5
-	'''
-	def generateGraph(self, gui):
-		self.centre_tile.altitude = numpy.random.random()
-		gen_queue = deque()
-		gen_queue.append(self.centre_tile)
-		while gen_queue:
-			tile = gen_queue.popleft()
-			if tile.x > 0 and tile.w == None:
-					new_tile = Tile()
-					new_tile.e = tile
-					tile.w = new_tile
-					if tile.nw != None:	
-						tile.nw.sw = new_tile
-						new_tile.ne = tile.nw
-					if tile.sw != None:	
-						tile.sw.nw = new_tile
-						new_tile.se = tile.sw
-					new_tile.x = tile.x - 2*0.866*tile.side_length
-					new_tile.y = tile.y
-					new_tile.setAltitude()
-					gen_queue.append(new_tile)
-			if tile.x > 0 and tile.y > 0 and tile.nw == None:
-					new_tile = Tile()
-					new_tile.se = tile
-					tile.nw = new_tile
-					if tile.w != None:
-						tile.w.ne = new_tile
-						new_tile.sw = tile.w
-					if tile.ne != None:
-						tile.ne.w = new_tile
-						new_tile.e = tile.ne
-					new_tile.x = tile.x - 0.866*tile.side_length
-					new_tile.y = tile.y - 1.5*tile.side_length
-					new_tile.setAltitude()
-					gen_queue.append(new_tile)
-			if tile.x < gui.canv_width and tile.y > 0 and tile.ne == None:
-					new_tile = Tile()
-					new_tile.sw = tile
-					tile.ne = new_tile
-					if tile.e != None:
-						tile.e.nw = new_tile
-						new_tile.se = tile.e
-					if tile.nw != None:
-						tile.nw.e = new_tile
-						new_tile.w = tile.nw
-					new_tile.x = tile.x + 0.866*tile.side_length
-					new_tile.y = tile.y - 1.5*tile.side_length
-					new_tile.setAltitude()
-					gen_queue.append(new_tile)
-			if tile.x < gui.canv_width and tile.e == None:
-				new_tile = Tile()
-				new_tile.w = tile
-				tile.e = new_tile
-				if tile.ne != None:
-					tile.ne.se = new_tile
-					new_tile.nw = tile.ne
-				if tile.se != None:
-					tile.se.ne = new_tile
-					new_tile.sw = tile.se
-				new_tile.x = tile.x + 2*0.866*tile.side_length
-				new_tile.y = tile.y
-				new_tile.setAltitude()
-				gen_queue.append(new_tile)
-			if tile.x < gui.canv_width and tile.y < gui.canv_height and tile.se == None:
-					new_tile = Tile()
-					new_tile.nw = tile
-					tile.se = new_tile
-					if tile.e != None:
-						tile.e.sw = new_tile
-						new_tile.ne = tile.e
-					if tile.sw != None:
-						tile.sw.e = new_tile
-						new_tile.w = tile.sw
-					new_tile.x = tile.x + 0.866*tile.side_length
-					new_tile.y = tile.y + 1.5*tile.side_length
-					new_tile.setAltitude()
-					gen_queue.append(new_tile)
-			if tile.x > 0 and tile.y < gui.canv_height and tile.sw == None:
-					new_tile = Tile()
-					new_tile.ne = tile
-					tile.sw = new_tile
-					if tile.w != None:
-						tile.w.se = new_tile
-						new_tile.nw = tile.w
-					if tile.se != None:
-						tile.se.w = new_tile
-						new_tile.e = tile.se
-					new_tile.x = tile.x - 0.866*tile.side_length
-					new_tile.y = tile.y + 1.5*tile.side_length
-					new_tile.setAltitude()
-					gen_queue.append(new_tile)
-		for _ in range(4):	
-			self.updateSandpiles(self.tileIterator())
-	'''
+
 
 	def generateGraph(self, gui):
 		self.centre_tile.w = Tile()
@@ -264,6 +171,7 @@ class Map:
 		for _ in range(5):
 			self.updateSandpiles(self.tileIterator())
 
+
 	def generateNecessaryLayers(self, gui, iterator_state = False):
 		all_new_tiles = []
 		need_new_layer = True
@@ -276,6 +184,7 @@ class Map:
 					break
 			all_new_tiles += layer_new_tiles
 		return all_new_tiles
+
 
 	def generateNewLayer(self, iterator_state = False):
 		new_tiles = []
