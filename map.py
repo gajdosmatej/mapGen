@@ -2,7 +2,7 @@ from collections import deque
 import numpy
 
 class Tile:
-	side_length = 12
+	side_length = 15
 	def __init__(self, iterator_state=False):
 		#neighbour compass directions
 		self.e = None
@@ -159,6 +159,8 @@ class Map:
 		sw.e = se
 		sw.nw = w
 
+		self.boundary_tiles = [w, nw, ne, e, se, sw]
+
 		w.setAltitude()
 		nw.setAltitude()
 		ne.setAltitude()
@@ -188,32 +190,15 @@ class Map:
 
 	def generateNewLayer(self, iterator_state = False):
 		new_tiles = []
-		start = self.centre_tile
-		while start.w != None:
-			start = start.w
-		
 		def indexToNeighbour(tile, index):
 			neighbours = [tile.w, tile.nw, tile.ne, tile.e, tile.se, tile.sw]
 			return neighbours[index]
 		
-		stack = [(start, -1)]
-		while stack:
-			boundary_tile, index_of_previous = stack.pop()
-			found = False
+		for tile in self.boundary_tiles:
 			for neigh_i in range(6):
-				neigh_i = (neigh_i+index_of_previous)%6	#chytry zpusob obihani
-				if neigh_i == index_of_previous:	continue	#nevracet se zpatky
-				neighbour = indexToNeighbour(boundary_tile, neigh_i)
-				if neighbour == None:	#cas pridat policko
-					new_tiles.append( (boundary_tile, neigh_i) )	#(policko, kam-nove-policko)
-				elif neighbour != start:
-					for neigh_neigh_i in range(6):
-						neigh_neigh = indexToNeighbour(neighbour, neigh_neigh_i)
-						if neigh_neigh == None and not found:	#soused boundary_tile ma nejake volne pole
-							stack.append( (neighbour, (neigh_i+3)%6 ) )	#(policko, smer-kterym-se-nevracet)
-							found = True
-							break
-		
+				if indexToNeighbour(tile, neigh_i) == None:
+					new_tiles.append( (tile, neigh_i) )
+
 		unique_new_tiles = []
 		x_offsets = [-2*0.866, -0.866, 0.866, 2*0.866, 0.866, -0.866]
 		y_offsets = [0, -1.5, -1.5, 0, 1.5, 1.5]
@@ -289,4 +274,5 @@ class Map:
 					creator_tile.w.se = new_tile
 					new_tile.nw = creator_tile.w
 
+		self.boundary_tiles = unique_new_tiles
 		return unique_new_tiles
