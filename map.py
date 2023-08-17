@@ -61,6 +61,12 @@ class Map:
 		self.centre_tile.y = centre_y
 		self.centre_tile.setAltitude()
 	
+	#EXPERIMENTAL
+	def plotAllBounds(self, gui):
+		for tile in self.tileIterator():
+			for neighbour in tile.getExistingNeighbours():
+				gui.canvas.create_line((tile.x, tile.y), (neighbour.x, neighbour.y))
+
 	def tileIterator(self, active_only = False):	#active_only ... those that are rendered
 		queue = deque()
 		def conditionFunc(tile):	return (not active_only) or tile.gui_active
@@ -159,7 +165,9 @@ class Map:
 		sw.e = se
 		sw.nw = w
 
-		self.boundary_tiles = [w, nw, ne, e, se, sw]
+		#self.boundary_tiles = [w, nw, ne, e, se, sw]
+
+		self.boundary_tiles = {"left": [nw, w, sw], "up": [nw, ne], "right": [ne, e, se], "down": [sw, se]}
 
 		w.setAltitude()
 		nw.setAltitude()
@@ -168,10 +176,229 @@ class Map:
 		se.setAltitude()
 		sw.setAltitude()
 
-		self.generateNecessaryLayers(gui)
-		
+		#self.generateNecessaryLayers(gui)
+		#for _ in range(4):
+			#self.generateLeftSide(gui)
+		#self.generateUpSide(gui)		
+		#self.generateUpSide(gui)
+		self.generateLeftSide(gui)
+		self.generateDownSide(gui)
+		self.generateUpSide(gui)
+		self.generateDownSide(gui)
+		#self.generateDownSide(gui)
+		self.generateRightSide(gui)
+		#self.generateRightSide(gui)
+		#print(self.centre_tile.x, self.centre_tile.y)
+		#print([(tile.x, tile.y) for tile in self.boundary_tiles["left"]])
+		self.generateUpSide(gui)
+		#self.generateUpSide(gui)
+		#self.generateLeftSide(gui)
+
 		for _ in range(5):
 			self.updateSandpiles(self.tileIterator())
+
+	#nejdriv vygenerovat leftside odshora dolu
+	#pak upside zleva doprava
+	#pak rightside odshora dolu
+	#nakonec downside zleva doprava
+
+
+	def generateLeftSide(self, gui):
+		new_boundary_tiles = []
+		uppermost_boundary_tile = self.boundary_tiles["left"][0]
+		iterator_state = uppermost_boundary_tile.iterator_state
+		
+		new_uppermost_tile = Tile(iterator_state)
+		new_uppermost_tile.setAltitude()
+		new_uppermost_tile.x = uppermost_boundary_tile.x - 2*0.866*uppermost_boundary_tile.side_length
+		new_uppermost_tile.y = uppermost_boundary_tile.y
+
+		new_uppermost_tile.e = uppermost_boundary_tile
+		uppermost_boundary_tile.w = new_uppermost_tile
+
+		if uppermost_boundary_tile.sw != None:
+			uppermost_boundary_tile.sw.nw = new_uppermost_tile
+			new_uppermost_tile.se = uppermost_boundary_tile.sw
+
+		new_boundary_tiles.append(new_uppermost_tile)
+
+		for tile in self.boundary_tiles["left"][1:]:
+			new_tile = Tile(iterator_state)
+			new_tile.setAltitude()
+			new_tile.x = tile.x - 2*0.866*tile.side_length
+			new_tile.y = tile.y
+
+			new_tile.e = tile
+			tile.w = new_tile
+			
+			tile.nw.sw = new_tile
+			new_tile.ne = tile.nw
+
+			if tile.nw.w != None:
+				tile.nw.w.se = new_tile
+				new_tile.nw = tile.nw.w
+
+			if tile.sw != None:
+				tile.sw.nw = new_tile
+				new_tile.se = tile.sw
+
+			new_boundary_tiles.append(new_tile)
+		
+		self.boundary_tiles["left"] = new_boundary_tiles
+		self.boundary_tiles["up"].insert(0, new_boundary_tiles[0])
+		self.boundary_tiles["down"].insert(0, new_boundary_tiles[-1])
+
+	def generateRightSide(self, gui):
+		new_boundary_tiles = []
+		uppermost_boundary_tile = self.boundary_tiles["right"][0]
+		iterator_state = uppermost_boundary_tile.iterator_state
+		
+		new_uppermost_tile = Tile(iterator_state)
+		new_uppermost_tile.setAltitude()
+		new_uppermost_tile.x = uppermost_boundary_tile.x + 2*0.866*uppermost_boundary_tile.side_length
+		new_uppermost_tile.y = uppermost_boundary_tile.y
+
+		new_uppermost_tile.w = uppermost_boundary_tile
+		uppermost_boundary_tile.e = new_uppermost_tile
+
+		if uppermost_boundary_tile.se != None:
+			uppermost_boundary_tile.se.ne = new_uppermost_tile
+			new_uppermost_tile.nw = uppermost_boundary_tile.se
+
+		new_boundary_tiles.append(new_uppermost_tile)
+
+		for tile in self.boundary_tiles["right"][1:]:
+			new_tile = Tile(iterator_state)
+			new_tile.setAltitude()
+			new_tile.x = tile.x + 2*0.866*tile.side_length
+			new_tile.y = tile.y
+
+			new_tile.w = tile
+			tile.e = new_tile
+			
+			tile.ne.se = new_tile
+			new_tile.nw = tile.ne
+
+			if tile.ne.e != None:
+				tile.ne.e.sw = new_tile
+				new_tile.ne = tile.ne.e
+
+			if tile.se != None:
+				tile.se.ne = new_tile
+				new_tile.sw = tile.se
+
+			new_boundary_tiles.append(new_tile)
+		
+		self.boundary_tiles["right"] = new_boundary_tiles
+		self.boundary_tiles["up"].append(new_boundary_tiles[0])
+		self.boundary_tiles["down"].append(new_boundary_tiles[-1])
+
+
+	def generateUpSide(self, gui):
+		new_boundary_tiles = []
+		leftmost_boundary_tile = self.boundary_tiles["up"][0]
+		iterator_state = leftmost_boundary_tile.iterator_state
+		
+		if leftmost_boundary_tile.sw != None:	
+			new_leftmost_tile = Tile(iterator_state)
+			new_leftmost_tile.setAltitude()
+			new_leftmost_tile.x = leftmost_boundary_tile.x - 0.866*leftmost_boundary_tile.side_length
+			new_leftmost_tile.y = leftmost_boundary_tile.y - 1.5*leftmost_boundary_tile.side_length
+
+			new_leftmost_tile.se = leftmost_boundary_tile
+			leftmost_boundary_tile.nw = new_leftmost_tile
+
+			new_boundary_tiles.append(new_leftmost_tile)
+
+		for tile in self.boundary_tiles["up"][1:]:
+			new_tile = Tile(iterator_state)
+			new_tile.setAltitude()
+			new_tile.x = tile.x - 0.866*tile.side_length
+			new_tile.y = tile.y - 1.5*tile.side_length
+
+			new_tile.se = tile
+			tile.nw = new_tile
+
+			tile.w.ne = new_tile
+			new_tile.sw = tile.w
+
+			if tile.w.nw != None:
+				new_tile.w = tile.w.nw
+				tile.w.nw.e = new_tile
+
+			new_boundary_tiles.append(new_tile)
+		
+		rightmost_boundary_tile = self.boundary_tiles["up"][-1]
+		if rightmost_boundary_tile.se != None:
+			new_rightmost_tile = Tile(iterator_state)
+			new_rightmost_tile.setAltitude()
+			new_rightmost_tile.x = rightmost_boundary_tile.x + 0.866*rightmost_boundary_tile.side_length
+			new_rightmost_tile.y = rightmost_boundary_tile.y - 1.5*rightmost_boundary_tile.side_length
+
+			new_rightmost_tile.sw = rightmost_boundary_tile
+			rightmost_boundary_tile.ne = new_rightmost_tile
+
+			new_rightmost_tile.w = rightmost_boundary_tile.nw
+			rightmost_boundary_tile.nw.e = new_rightmost_tile
+
+			new_boundary_tiles.append(new_rightmost_tile)
+		
+		self.boundary_tiles["up"] = new_boundary_tiles
+		self.boundary_tiles["left"].insert(0, new_boundary_tiles[0])
+		self.boundary_tiles["right"].insert(0, new_boundary_tiles[-1])
+
+	def generateDownSide(self, gui):
+		new_boundary_tiles = []
+		leftmost_boundary_tile = self.boundary_tiles["down"][0]
+		iterator_state = leftmost_boundary_tile.iterator_state
+		
+		if leftmost_boundary_tile.nw != None:	
+			new_leftmost_tile = Tile(iterator_state)
+			new_leftmost_tile.setAltitude()
+			new_leftmost_tile.x = leftmost_boundary_tile.x - 0.866*leftmost_boundary_tile.side_length
+			new_leftmost_tile.y = leftmost_boundary_tile.y + 1.5*leftmost_boundary_tile.side_length
+
+			new_leftmost_tile.ne = leftmost_boundary_tile
+			leftmost_boundary_tile.sw = new_leftmost_tile
+
+			new_boundary_tiles.append(new_leftmost_tile)
+
+		for tile in self.boundary_tiles["down"][1:]:
+			new_tile = Tile(iterator_state)
+			new_tile.setAltitude()
+			new_tile.x = tile.x - 0.866*tile.side_length
+			new_tile.y = tile.y + 1.5*tile.side_length
+
+			new_tile.ne = tile
+			tile.sw = new_tile
+
+			tile.w.se = new_tile
+			new_tile.nw = tile.w
+
+			if tile.w.sw != None:
+				new_tile.w = tile.w.sw
+				tile.w.sw.e = new_tile
+
+			new_boundary_tiles.append(new_tile)
+		
+		rightmost_boundary_tile = self.boundary_tiles["down"][-1]
+		if rightmost_boundary_tile.ne != None:
+			new_rightmost_tile = Tile(iterator_state)
+			new_rightmost_tile.setAltitude()
+			new_rightmost_tile.x = rightmost_boundary_tile.x + 0.866*rightmost_boundary_tile.side_length
+			new_rightmost_tile.y = rightmost_boundary_tile.y + 1.5*rightmost_boundary_tile.side_length
+
+			new_rightmost_tile.nw = rightmost_boundary_tile
+			rightmost_boundary_tile.se = new_rightmost_tile
+
+			new_rightmost_tile.w = rightmost_boundary_tile.sw
+			rightmost_boundary_tile.sw.e = new_rightmost_tile
+
+			new_boundary_tiles.append(new_rightmost_tile)
+		
+		self.boundary_tiles["down"] = new_boundary_tiles
+		self.boundary_tiles["left"].append(new_boundary_tiles[0])
+		self.boundary_tiles["right"].append(new_boundary_tiles[-1])
 
 
 	def generateNecessaryLayers(self, gui, iterator_state = False):

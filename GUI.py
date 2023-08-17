@@ -25,13 +25,16 @@ class WindowHandler:
 		#plot all the newly created tiles
 		for tile in mapObj.tileIterator():
 			tile.activate()
-			self.plotTile(tile, self.getColourOfTile(tile))
+			#self.plotTile(tile, self.getColourOfTile(tile))
+			self.plotTile(tile, "#FFFFFF")
 
 		#create triggers that will move the map when WASD keyboard keys are pressed
 		self.root.bind("<KeyPress-w>", lambda event, gui=self: gui.moveMap(mapObj, 0, 10))
 		self.root.bind("<KeyPress-a>", lambda event, gui=self: gui.moveMap(mapObj, 10, 0))
 		self.root.bind("<KeyPress-s>", lambda event, gui=self: gui.moveMap(mapObj, 0, -10))
 		self.root.bind("<KeyPress-d>", lambda event, gui=self: gui.moveMap(mapObj, -10, 0))
+
+		mapObj.plotAllBounds(self)
 
 		#complete the tkinter window creation
 		tkinter.mainloop()
