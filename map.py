@@ -47,7 +47,9 @@ class Tile:
 		if existing_neighbours:
 			self.altitude += sum(existing_altitudes) / len(existing_altitudes)
 		'''
-		self.altitude = numpy.random.uniform(-1,1)
+		#self.altitude = numpy.random.uniform(-1,1)
+		self.altitude = 1
+		if numpy.random.random() > 0.5:	self.altitude = -self.altitude
 
 	def activate(self):
 		self.gui_active = True
@@ -116,13 +118,16 @@ class Map:
 		@tiles ... List of tiles, which altitudes are being updated. 
 		'''
 		alpha = 20
-		for i in range(10):
+		beta=0.01
+		for i in range(5):
 			for tile in tiles:
 				neighbours = list( tile.getExistingNeighbours() )
 				if neighbours != []:
 					average_neighbouring_altitude = sum(neighbour.altitude for neighbour in neighbours) / len(list(neighbours))
 					tile.altitude = (tile.altitude + alpha*average_neighbouring_altitude) / (1+alpha)
-				tile.smoothed = True
+					rand_shift = tile.altitude + beta*numpy.random.random()
+					if -1 < rand_shift < 1:	tile.altitude = rand_shift
+
 
 	def generateGraph(self, gui):
 		tile = self.boundary_tiles["left"][len(self.boundary_tiles["left"])//2]

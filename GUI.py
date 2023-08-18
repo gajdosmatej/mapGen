@@ -165,6 +165,9 @@ class WindowHandler:
 		#possibly update mapObject.centre_tile after movement
 		mapObject.updateCentreTile(self.canv_width / 2, self.canv_height / 2)
 
+		#for tile in mapObject.tileIterator():
+		#	print(tile.altitude, tile.temperature)
+
 
 
 	def getColourOfTile(self, tile :Tile) -> str:
@@ -172,9 +175,22 @@ class WindowHandler:
 		Returns the plotting fill colour based on the @tile attributes.
 		@tile ... Tile object for which the colour is being chosen.
 		'''
-		if tile.altitude >= 0:
-			val = str(min(int(numpy.floor(100*tile.altitude)), 79) + 10)
-			if len(val) == 1:	val = "0" + val
-			return "#00" + val + "00"
-		else:
+
+		mapping = ['5','6','7','8','9','A','B','C','D','E','F']
+		brightness = int( numpy.floor(100*tile.altitude) )
+		first_digit = brightness // 10
+		second_digit = brightness % 10
+
+		#ocean
+		if tile.altitude < 0:
 			return "#0022BB"
+		#beach
+		elif any([neighbour.altitude for neighbour in tile.getExistingNeighbours()]) < 0:
+			return "#AA7700"
+		#mountains
+		elif tile.altitude > 0.45:
+			return "#AAAAAA"
+		elif tile.altitude > 0.3:
+			return "#444444"
+		else:
+			return "#00" + mapping[first_digit] + mapping[second_digit] + "00"
