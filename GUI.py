@@ -133,19 +133,27 @@ class WindowHandler:
 		#if need_new_layer:	
 			#new_tiles = mapObject.generateNecessaryLayers(self, mapObject.centre_tile.iterator_state)
 		
+		chunk_size = 5
+		new_tiles = []
 		if need_new_layer["up"]:
-			mapObject.generateUpSide(self)
+			for _ in range(chunk_size):
+				mapObject.generateUpSide(self)
+				new_tiles += mapObject.boundary_tiles["up"]
 		if need_new_layer["left"]:
-			mapObject.generateLeftSide(self)
+			for _ in range(chunk_size):
+				mapObject.generateLeftSide(self)
+				new_tiles += mapObject.boundary_tiles["left"]
 		if need_new_layer["right"]:
-			mapObject.generateRightSide(self)
+			for _ in range(chunk_size):
+				mapObject.generateRightSide(self)
+				new_tiles += mapObject.boundary_tiles["right"]
 		if need_new_layer["down"]:
-			mapObject.generateDownSide(self)
+			for _ in range(chunk_size):
+				mapObject.generateDownSide(self)
+				new_tiles += mapObject.boundary_tiles["down"]
 		
-		#make the terrain smoother
-		for _ in range(4):	
-			for key in mapObject.boundary_tiles:
-				mapObject.updateSandpiles(mapObject.boundary_tiles[key])
+		#make the terrain smoother	
+		mapObject.updateSandpiles(new_tiles)
 
 
 	def moveMap(self, mapObject :Map, dx :float, dy :float):

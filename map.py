@@ -13,9 +13,10 @@ class Tile:
 		self.se = None
 
 		#tile biome parameters
-		self.temperature = None
 		self.altitude = None
-		self.humidity = None
+
+		#was terrain smoothed
+		self.smoothed = False
 
 		#centre coordinates
 		self.x = None
@@ -113,11 +114,14 @@ class Map:
 		Make the altitudes of @tiles more smooth by averaging tile altitude with its neighbours' altitudes.
 		@tiles ... List of tiles, which altitudes are being updated. 
 		'''
-		alpha = 0.1
-		for tile in tiles:
-			for neighbour in tile.getExistingNeighbours():
-				tile.altitude = (tile.altitude + alpha*neighbour.altitude) / (1+alpha)
-
+		alpha = 20
+		for i in range(10):
+			for tile in tiles:
+				neighbours = list( tile.getExistingNeighbours() )
+				if neighbours != []:
+					average_neighbouring_altitude = sum(neighbour.altitude for neighbour in neighbours) / len(list(neighbours))
+					tile.altitude = (tile.altitude + alpha*average_neighbouring_altitude) / (1+alpha)
+				tile.smoothed = True
 
 	def generateGraph(self, gui):
 		self.centre_tile.w = Tile()
@@ -215,8 +219,7 @@ class Map:
 		#self.generateUpSide(gui)
 		#self.generateLeftSide(gui)
 
-		for _ in range(5):
-			self.updateSandpiles(self.tileIterator())
+		self.updateSandpiles( list(self.tileIterator()) )
 
 	#nejdriv vygenerovat leftside odshora dolu
 	#pak upside zleva doprava
