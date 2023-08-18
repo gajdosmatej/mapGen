@@ -128,11 +128,7 @@ class WindowHandler:
 			#if tile.gui_active:
 			tile.deactivate()
 			self.hideTile(tile)
-		
-		#make the map larger if necessary
-		#if need_new_layer:	
-			#new_tiles = mapObject.generateNecessaryLayers(self, mapObject.centre_tile.iterator_state)
-		
+
 		chunk_size = 5
 		new_tiles = []
 		if need_new_layer["up"]:
