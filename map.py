@@ -67,6 +67,7 @@ class Map:
 			for neighbour in tile.getExistingNeighbours():
 				gui.canvas.create_line((tile.x, tile.y), (neighbour.x, neighbour.y))
 
+
 	def tileIterator(self, active_only = False):	#active_only ... those that are rendered
 		queue = deque()
 		def conditionFunc(tile):	return (not active_only) or tile.gui_active
@@ -112,9 +113,10 @@ class Map:
 		Make the altitudes of @tiles more smooth by averaging tile altitude with its neighbours' altitudes.
 		@tiles ... List of tiles, which altitudes are being updated. 
 		'''
+		alpha = 0.1
 		for tile in tiles:
 			for neighbour in tile.getExistingNeighbours():
-				tile.altitude = (tile.altitude + 0.5*neighbour.altitude) / 1.5
+				tile.altitude = (tile.altitude + alpha*neighbour.altitude) / (1+alpha)
 
 
 	def generateGraph(self, gui):
@@ -179,18 +181,37 @@ class Map:
 		#self.generateNecessaryLayers(gui)
 		#for _ in range(4):
 			#self.generateLeftSide(gui)
+		tile = self.boundary_tiles["left"][len(self.boundary_tiles["left"])//2]
+		while gui.isTileOnScreen(tile):
+			self.generateLeftSide(gui)
+			tile = self.boundary_tiles["left"][len(self.boundary_tiles["left"])//2]
+		
+		tile = self.boundary_tiles["up"][len(self.boundary_tiles["up"])//2]
+		while gui.isTileOnScreen(tile):
+			self.generateUpSide(gui)
+			tile = self.boundary_tiles["up"][len(self.boundary_tiles["up"])//2]
+
+		tile = self.boundary_tiles["right"][len(self.boundary_tiles["right"])//2]
+		while gui.isTileOnScreen(tile):
+			self.generateRightSide(gui)
+			tile = self.boundary_tiles["right"][len(self.boundary_tiles["right"])//2]
+
+		tile = self.boundary_tiles["down"][len(self.boundary_tiles["down"])//2]
+		while gui.isTileOnScreen(tile):
+			self.generateDownSide(gui)
+			tile = self.boundary_tiles["down"][len(self.boundary_tiles["down"])//2]
 		#self.generateUpSide(gui)		
 		#self.generateUpSide(gui)
-		self.generateLeftSide(gui)
-		self.generateDownSide(gui)
-		self.generateUpSide(gui)
-		self.generateDownSide(gui)
+		#self.generateLeftSide(gui)
 		#self.generateDownSide(gui)
-		self.generateRightSide(gui)
+		#self.generateUpSide(gui)
+		#self.generateDownSide(gui)
+		#self.generateDownSide(gui)
+		#self.generateRightSide(gui)
 		#self.generateRightSide(gui)
 		#print(self.centre_tile.x, self.centre_tile.y)
 		#print([(tile.x, tile.y) for tile in self.boundary_tiles["left"]])
-		self.generateUpSide(gui)
+		#self.generateUpSide(gui)
 		#self.generateUpSide(gui)
 		#self.generateLeftSide(gui)
 

@@ -11,6 +11,7 @@ class WindowHandler:
 		self.root = tkinter.Tk()
 		self.screen_width = self.root.winfo_screenwidth()
 		self.screen_height = self.root.winfo_screenheight()
+		self.move_speed = 8
 
 		#create tkinter canvas inside the window
 		self.canv_width = self.screen_width // 2
@@ -26,15 +27,15 @@ class WindowHandler:
 		for tile in mapObj.tileIterator():
 			tile.activate()
 			#self.plotTile(tile, self.getColourOfTile(tile))
-			self.plotTile(tile, "#FFFFFF")
+			self.plotTile(tile, self.getColourOfTile(tile))
 
 		#create triggers that will move the map when WASD keyboard keys are pressed
-		self.root.bind("<KeyPress-w>", lambda event, gui=self: gui.moveMap(mapObj, 0, 10))
-		self.root.bind("<KeyPress-a>", lambda event, gui=self: gui.moveMap(mapObj, 10, 0))
-		self.root.bind("<KeyPress-s>", lambda event, gui=self: gui.moveMap(mapObj, 0, -10))
-		self.root.bind("<KeyPress-d>", lambda event, gui=self: gui.moveMap(mapObj, -10, 0))
+		self.root.bind("<KeyPress-w>", lambda event, gui=self: gui.moveMap(mapObj, 0, self.move_speed))
+		self.root.bind("<KeyPress-a>", lambda event, gui=self: gui.moveMap(mapObj, self.move_speed, 0))
+		self.root.bind("<KeyPress-s>", lambda event, gui=self: gui.moveMap(mapObj, 0, -self.move_speed))
+		self.root.bind("<KeyPress-d>", lambda event, gui=self: gui.moveMap(mapObj, -self.move_speed, 0))
 
-		mapObj.plotAllBounds(self)
+		#mapObj.plotAllBounds(self)
 
 		#complete the tkinter window creation
 		tkinter.mainloop()
@@ -78,7 +79,7 @@ class WindowHandler:
 
 		to_activate = set()
 		to_deactivate = set()
-		need_new_layer = False
+		need_new_layer = {"up": False, "down": False, "left": False, "right": False}
 
 		#go through every tile on the map, which is currently visible on-screen
 		for tile in mapObject.tileIterator(active_only=True):
@@ -107,8 +108,14 @@ class WindowHandler:
 							neighbours[i].iterator_state = tile.iterator_state
 
 			#check, whether a visible tile is also on the map boundary
-			if len(list(tile.getExistingNeighbours())) < 6:
-				need_new_layer = True
+			if tile.w == None:
+				need_new_layer["left"] = True
+			if tile.nw == None:
+				need_new_layer["up"] = True
+			if tile.e == None:
+				need_new_layer["right"] = True
+			if tile.sw == None:
+				need_new_layer["down"] = True
 
 		#render tiles that are newly visible
 		for tile in to_activate:
@@ -123,11 +130,22 @@ class WindowHandler:
 			self.hideTile(tile)
 		
 		#make the map larger if necessary
-		if need_new_layer:	
-			new_tiles = mapObject.generateNecessaryLayers(self, mapObject.centre_tile.iterator_state)
-			
-			#make the terrain smoother
-			for _ in range(4):	mapObject.updateSandpiles(new_tiles)
+		#if need_new_layer:	
+			#new_tiles = mapObject.generateNecessaryLayers(self, mapObject.centre_tile.iterator_state)
+		
+		if need_new_layer["up"]:
+			mapObject.generateUpSide(self)
+		if need_new_layer["left"]:
+			mapObject.generateLeftSide(self)
+		if need_new_layer["right"]:
+			mapObject.generateRightSide(self)
+		if need_new_layer["down"]:
+			mapObject.generateDownSide(self)
+		
+		#make the terrain smoother
+		for _ in range(4):	
+			for key in mapObject.boundary_tiles:
+				mapObject.updateSandpiles(mapObject.boundary_tiles[key])
 
 
 	def moveMap(self, mapObject :Map, dx :float, dy :float):
