@@ -62,11 +62,13 @@ class WindowHandler:
 		#self.canvas.create_line(river.mid_point, river.end_point, width=3, fill="#FFFFFF")
 		if isinstance(river, RiverVertex):
 			x, y = river.start_point
-			river.gui_id = [self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#0000FF"), 
-							self.canvas.create_oval(x-2, y-2, x+2, y+2, fill="#0000FF")]
+			river.gui_id = [self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#0022BB")] 
+			if river.is_start:
+				river.gui_id.append( self.canvas.create_oval(x-2, y-2, x+2, y+2, fill="#0022BB") )
 			#river.gui_id = [self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#0000FF")]
 		else:
-			river.gui_id = [self.canvas.create_line(river.start_point, river.mid_point, width=3, fill="#0000FF"), self.canvas.create_line(river.mid_point, river.end_point, width=3, fill="#0000FF")]
+			river.gui_id = [self.canvas.create_line(river.start_point, river.mid_point, width=3, fill="#0022BB"), 
+							self.canvas.create_line(river.mid_point, river.end_point, width=3, fill="#0022BB")]
 	
 	def hideRiver(self, river):
 		for id in river.gui_id:
@@ -139,15 +141,6 @@ class WindowHandler:
 			if tile.sw == None:
 				need_new_layer["down"] = True
 
-		#render tiles that are newly visible
-		for tile in to_activate:
-			#if not tile.gui_active:
-				tile.activate()
-				self.plotTile(tile, self.getColourOfTile(tile))
-				for river in tile.rivers:
-					river.setCoords(tile)
-					self.plotRiver(river)
-
 		#unrender tiles that are newly off the screen
 		for tile in to_deactivate:
 			#if tile.gui_active:
@@ -184,7 +177,21 @@ class WindowHandler:
 		
 		#make the terrain smoother	
 		mapObject.updateSandpiles(new_tiles)
+		for tile in new_tiles:
+			if tile.isRiverStart():
+				river = RiverVertex(tile, is_start=True)
+				tile.rivers.append(river)
+				river_tiles.append( (tile, river) )
 		mapObject.makeRivers(river_tiles)
+
+		#render tiles that are newly visible
+		for tile in to_activate:
+			#if not tile.gui_active:
+				tile.activate()
+				self.plotTile(tile, self.getColourOfTile(tile))
+				for river in tile.rivers:
+					river.setCoords(tile)
+					self.plotRiver(river)
 
 
 
@@ -219,6 +226,8 @@ class WindowHandler:
 
 		#ocean
 		if tile.altitude < 0:
+			return "#0022BB"
+		elif tile.is_lake:
 			return "#0022BB"
 		#mountains
 		elif tile.altitude > 0.45:

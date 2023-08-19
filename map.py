@@ -2,7 +2,8 @@ from collections import deque
 import numpy
 
 class RiverVertex:
-	def __init__(self, tile):
+	def __init__(self, tile, is_start=False):
+		self.is_start = is_start
 		self.end = None
 		self.end_side = None
 		self.gui_id = None
@@ -63,6 +64,7 @@ class Tile:
 
 		#tile biome parameters
 		self.altitude = None
+		self.is_lake = False
 		self.rivers = []
 
 		#centre coordinates
@@ -145,7 +147,8 @@ class Tile:
 		self.gui_active = False
 
 	def isRiverStart(self):
-		if numpy.random.random() > 0.98:	return True
+		k = 0.1
+		if numpy.random.random() < k*self.altitude:	return True
 		return False
 
 class Map:
@@ -233,9 +236,6 @@ class Map:
 		
 		while river_tiles != []:
 			river_tile, river = river_tiles.pop()
-			if river_tile.altitude <= 0:	
-				river_tile.rivers = []
-				continue
 
 			possible_directions = [i for i in range(6)	if indexToNeighbour(river_tile, i) != None
 														and not indexToNeighbour(river_tile, i).was_plotted
@@ -244,6 +244,7 @@ class Map:
 			if possible_directions == []:
 				river.end_side = indexToSide(numpy.random.randint(0,6))
 				river.setCoords(river_tile)
+				river_tile.is_lake = True
 				continue
 			else:
 				'''
@@ -270,7 +271,7 @@ class Map:
 
 			if new_river_tile.altitude >= 0:
 				if new_river_tile.rivers != [] or numpy.random.random() < 0:	#stop
-					new_river = RiverVertex(new_river_tile)
+					new_river = RiverVertex(new_river_tile, False)
 					new_river_tile.rivers.append(new_river)
 					river.end = new_river
 					new_river.end = river
@@ -292,25 +293,31 @@ class Map:
 
 		tile = self.boundary_tiles["left"][len(self.boundary_tiles["left"])//2]
 		while gui.isTileOnScreen(tile):
-			river_tiles += self.generateLeftSide(gui)
+			self.generateLeftSide(gui)
 			tile = self.boundary_tiles["left"][len(self.boundary_tiles["left"])//2]
 		
 		tile = self.boundary_tiles["up"][len(self.boundary_tiles["up"])//2]
 		while gui.isTileOnScreen(tile):
-			river_tiles += self.generateUpSide(gui)
+			self.generateUpSide(gui)
 			tile = self.boundary_tiles["up"][len(self.boundary_tiles["up"])//2]
 
 		tile = self.boundary_tiles["right"][len(self.boundary_tiles["right"])//2]
 		while gui.isTileOnScreen(tile):
-			river_tiles += self.generateRightSide(gui)
+			self.generateRightSide(gui)
 			tile = self.boundary_tiles["right"][len(self.boundary_tiles["right"])//2]
 
 		tile = self.boundary_tiles["down"][len(self.boundary_tiles["down"])//2]
 		while gui.isTileOnScreen(tile):
-			river_tiles += self.generateDownSide(gui)
+			self.generateDownSide(gui)
 			tile = self.boundary_tiles["down"][len(self.boundary_tiles["down"])//2]
 		
 		self.updateSandpiles( list(self.tileIterator()) )
+		
+		for tile in self.tileIterator():
+			if tile.isRiverStart():
+				river = RiverVertex(tile, True)
+				tile.rivers.append(river)
+				river_tiles.append( (tile, river) )
 		self.makeRivers(river_tiles)
 
 
@@ -353,11 +360,6 @@ class Map:
 			if tile.sw != None:
 				tile.sw.nw = new_tile
 				new_tile.se = tile.sw
-			
-			if new_tile.isRiverStart():
-				river = RiverVertex(new_tile)
-				new_tile.rivers.append(river)
-				river_tiles.append( (new_tile, river) )
 			
 			new_boundary_tiles.append(new_tile)
 		
@@ -407,11 +409,6 @@ class Map:
 			if tile.se != None:
 				tile.se.ne = new_tile
 				new_tile.sw = tile.se
-			
-			if new_tile.isRiverStart():
-				river = RiverVertex(new_tile)
-				new_tile.rivers.append(river)
-				river_tiles.append( (new_tile, river) )
 
 			new_boundary_tiles.append(new_tile)
 		
@@ -454,11 +451,6 @@ class Map:
 			if tile.w.nw != None:
 				new_tile.w = tile.w.nw
 				tile.w.nw.e = new_tile
-
-			if new_tile.isRiverStart():
-				river = RiverVertex(new_tile)
-				new_tile.rivers.append(river)
-				river_tiles.append( (new_tile, river) )
 
 			new_boundary_tiles.append(new_tile)
 		
@@ -515,11 +507,6 @@ class Map:
 			if tile.w.sw != None:
 				new_tile.w = tile.w.sw
 				tile.w.sw.e = new_tile
-
-			if new_tile.isRiverStart():
-				river = RiverVertex(new_tile)
-				new_tile.rivers.append(river)
-				river_tiles.append( (new_tile, river) )
 
 			new_boundary_tiles.append(new_tile)
 		
