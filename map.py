@@ -5,7 +5,13 @@ class RiverSegment:
 	def __init__(self, tile, side_1, side_2):
 		self.start = None
 		self.end = None
+		
+		self.start_side = side_1
+		self.end_side = side_2
+		self.setCoords(tile)
+		self.gui_id = None
 
+	def setCoords(self, tile):
 		side_xs = {	"w": tile.x - 0.866*tile.side_length,
 					"nw": tile.x - 0.5*0.866*tile.side_length,
 					"ne": tile.x + 0.5*0.866*tile.side_length,
@@ -18,12 +24,10 @@ class RiverSegment:
 					"e": tile.y,
 					"se": tile.y + 0.75*tile.side_length,
 					"sw": tile.y + 0.75*tile.side_length}
-		
-		self.start_side = side_1
-		self.end_side = side_2
-		self.start_point = (side_xs[side_1], side_ys[side_1])
+
+		self.start_point = (side_xs[self.start_side], side_ys[self.start_side])
 		self.mid_point = (tile.x, tile.y)
-		self.end_point = (side_xs[side_2], side_ys[side_2])
+		self.end_point = (side_xs[self.end_side], side_ys[self.end_side])
 
 class Tile:
 	side_length = 60

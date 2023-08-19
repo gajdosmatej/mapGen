@@ -59,7 +59,10 @@ class WindowHandler:
 	def plotRiver(self, river):
 		#self.canvas.create_line(river.start_point, river.mid_point, width=3, fill="#FFFFFF")
 		#self.canvas.create_line(river.mid_point, river.end_point, width=3, fill="#FFFFFF")
-		self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#FFFFFF")
+		river.gui_id = self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#FFFFFF")
+
+	def hideRiver(self, river):
+		self.canvas.delete(river.gui_id)
 
 	def hideTile(self, tile :Tile):
 		'''
@@ -94,6 +97,8 @@ class WindowHandler:
 			tile.x += dx
 			tile.y += dy
 			self.canvas.move(tile.gui_id, dx, dy)
+			for river in tile.rivers:
+				self.canvas.move(river.gui_id, dx, dy)
 
 			#the tile moved off the screen
 			if not self.isTileOnScreen(tile):
@@ -129,12 +134,17 @@ class WindowHandler:
 			#if not tile.gui_active:
 				tile.activate()
 				self.plotTile(tile, self.getColourOfTile(tile))
+				for river in tile.rivers:
+					river.setCoords(tile)
+					self.plotRiver(river)
 
 		#unrender tiles that are newly off the screen
 		for tile in to_deactivate:
 			#if tile.gui_active:
 			tile.deactivate()
 			self.hideTile(tile)
+			for river in tile.rivers:
+				self.hideRiver(river)
 
 		chunk_size = 5
 		new_tiles = []
