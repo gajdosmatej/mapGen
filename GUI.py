@@ -28,6 +28,7 @@ class WindowHandler:
 			tile.activate()
 			#self.plotTile(tile, self.getColourOfTile(tile))
 			self.plotTile(tile, self.getColourOfTile(tile))
+			if tile.altitude < 0:	tile.rivers = []
 			for river in tile.rivers:
 				self.plotRiver(river)
 
@@ -134,6 +135,7 @@ class WindowHandler:
 			#if not tile.gui_active:
 				tile.activate()
 				self.plotTile(tile, self.getColourOfTile(tile))
+				if tile.altitude < 0:	tile.rivers = []	#POTREBA UDELAT AZ PO SANDPILES
 				for river in tile.rivers:
 					river.setCoords(tile)
 					self.plotRiver(river)

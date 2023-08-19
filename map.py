@@ -61,6 +61,7 @@ class Tile:
 		self.gui_active = False
 
 	def setRivers(self):
+		river_add_probability = 0.1
 		def indexToSide(index):
 			sides = ["w", "nw", "ne", "e", "se", "sw"]
 			return sides[index]
@@ -71,6 +72,7 @@ class Tile:
 			neighbours = [tile.w, tile.nw, tile.ne, tile.e, tile.se, tile.sw]
 			return neighbours[index]
 		
+		added_river = False
 		for i in range(6):
 			neighbour = indexToNeighbour(self, i)
 			if neighbour != None:
@@ -80,11 +82,18 @@ class Tile:
 						river.start = new_river
 						new_river.end = river
 						self.rivers.append(new_river)
+						added_river = True
 					elif river.end_side == indexToSide( (i+3)%6 ):
 						new_river = RiverSegment(self, indexToSide(i), indexToSide( numpy.random.choice([j for j in range(6) if j != i]) ))
 						river.end = new_river
 						new_river.start = river
 						self.rivers.append(new_river)
+						added_river = True
+		
+		if not added_river and numpy.random.random() < river_add_probability:
+			end = numpy.random.choice( [i for i in range(6) if indexToNeighbour(self, i) == None] )
+			start = numpy.random.choice([i for i in range(6) if i != end])
+			self.rivers.append( RiverSegment(self, indexToSide(start), indexToSide(end) ) )
 
 
 	def getExistingNeighbours(self):
@@ -183,7 +192,6 @@ class Map:
 
 
 	def generateGraph(self, gui):
-		self.centre_tile.rivers.append( RiverSegment(self.centre_tile, "w", "ne") )
 
 		tile = self.boundary_tiles["left"][len(self.boundary_tiles["left"])//2]
 		while gui.isTileOnScreen(tile):
