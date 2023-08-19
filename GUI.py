@@ -1,5 +1,5 @@
 import tkinter
-from map import Map, Tile, RiverSegment
+from map import Map, Tile, RiverSegment, RiverVertex
 import numpy
 
 class WindowHandler:
@@ -28,7 +28,6 @@ class WindowHandler:
 			tile.activate()
 			#self.plotTile(tile, self.getColourOfTile(tile))
 			self.plotTile(tile, self.getColourOfTile(tile))
-			if tile.altitude < 0:	tile.rivers = []
 			for river in tile.rivers:
 				self.plotRiver(river)
 
@@ -56,14 +55,22 @@ class WindowHandler:
 					tile.x-0.866*tile.side_length, tile.y+0.5*tile.side_length,
 					tile.x-0.866*tile.side_length, tile.y-0.5*tile.side_length]		
 		tile.gui_id = self.canvas.create_polygon(points, outline='black', fill=background_colour, width=2)
+		tile.was_plotted = True
 
 	def plotRiver(self, river):
 		#self.canvas.create_line(river.start_point, river.mid_point, width=3, fill="#FFFFFF")
 		#self.canvas.create_line(river.mid_point, river.end_point, width=3, fill="#FFFFFF")
-		river.gui_id = self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#FFFFFF")
-
+		if isinstance(river, RiverVertex):
+			x, y = river.start_point
+			river.gui_id = [self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#0000FF"), 
+							self.canvas.create_oval(x-2, y-2, x+2, y+2, fill="#0000FF")]
+			#river.gui_id = [self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#0000FF")]
+		else:
+			river.gui_id = [self.canvas.create_line(river.start_point, river.mid_point, width=3, fill="#0000FF"), self.canvas.create_line(river.mid_point, river.end_point, width=3, fill="#0000FF")]
+	
 	def hideRiver(self, river):
-		self.canvas.delete(river.gui_id)
+		for id in river.gui_id:
+			self.canvas.delete(id)
 
 	def hideTile(self, tile :Tile):
 		'''
@@ -99,7 +106,9 @@ class WindowHandler:
 			tile.y += dy
 			self.canvas.move(tile.gui_id, dx, dy)
 			for river in tile.rivers:
-				self.canvas.move(river.gui_id, dx, dy)
+				for id in river.gui_id:
+					self.canvas.move(id, dx, dy)
+					#pass
 
 			#the tile moved off the screen
 			if not self.isTileOnScreen(tile):
@@ -135,7 +144,6 @@ class WindowHandler:
 			#if not tile.gui_active:
 				tile.activate()
 				self.plotTile(tile, self.getColourOfTile(tile))
-				if tile.altitude < 0:	tile.rivers = []	#POTREBA UDELAT AZ PO SANDPILES
 				for river in tile.rivers:
 					river.setCoords(tile)
 					self.plotRiver(river)
@@ -150,25 +158,34 @@ class WindowHandler:
 
 		chunk_size = 5
 		new_tiles = []
+		river_tiles = []
+		
+		for key in ["left", "right", "up", "down"]:
+			for tile in mapObject.boundary_tiles[key]:
+				for river in tile.rivers:
+					if river.end == None:	river_tiles.append( (tile, river) )
+
 		if need_new_layer["up"]:
 			for _ in range(chunk_size):
-				mapObject.generateUpSide(self)
+				river_tiles += mapObject.generateUpSide(self)
 				new_tiles += mapObject.boundary_tiles["up"]
 		if need_new_layer["left"]:
 			for _ in range(chunk_size):
-				mapObject.generateLeftSide(self)
+				river_tiles += mapObject.generateLeftSide(self)
 				new_tiles += mapObject.boundary_tiles["left"]
 		if need_new_layer["right"]:
 			for _ in range(chunk_size):
-				mapObject.generateRightSide(self)
+				river_tiles += mapObject.generateRightSide(self)
 				new_tiles += mapObject.boundary_tiles["right"]
 		if need_new_layer["down"]:
 			for _ in range(chunk_size):
-				mapObject.generateDownSide(self)
+				river_tiles += mapObject.generateDownSide(self)
 				new_tiles += mapObject.boundary_tiles["down"]
 		
 		#make the terrain smoother	
 		mapObject.updateSandpiles(new_tiles)
+		mapObject.makeRivers(river_tiles)
+
 
 
 	def moveMap(self, mapObject :Map, dx :float, dy :float):
@@ -195,7 +212,7 @@ class WindowHandler:
 		@tile ... Tile object for which the colour is being chosen.
 		'''
 
-		mapping = ['5','6','7','8','9','A','B','C','D','E','F']
+		mapping = ['7','5','3','1']
 		brightness = int( numpy.floor(100*tile.altitude) )
 		first_digit = brightness // 10
 		second_digit = brightness % 10
@@ -203,13 +220,10 @@ class WindowHandler:
 		#ocean
 		if tile.altitude < 0:
 			return "#0022BB"
-		#beach
-		elif any([neighbour.altitude for neighbour in tile.getExistingNeighbours()]) < 0:
-			return "#AA7700"
 		#mountains
 		elif tile.altitude > 0.45:
 			return "#AAAAAA"
 		elif tile.altitude > 0.3:
 			return "#444444"
 		else:
-			return "#00" + mapping[first_digit] + mapping[second_digit] + "00"
+			return "#00" + mapping[first_digit] + "000"

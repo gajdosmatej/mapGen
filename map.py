@@ -1,14 +1,35 @@
 from collections import deque
 import numpy
 
+class RiverVertex:
+	def __init__(self, tile):
+		self.end = None
+		self.end_side = None
+		self.gui_id = None
+	
+	def setCoords(self, tile):
+		side_xs = {	"w": tile.x - 0.866*tile.side_length,
+					"nw": tile.x - 0.5*0.866*tile.side_length,
+					"ne": tile.x + 0.5*0.866*tile.side_length,
+					"e": tile.x + 0.866*tile.side_length,
+					"se": tile.x + 0.5*0.866*tile.side_length,
+					"sw": tile.x - 0.5*0.866*tile.side_length}
+		side_ys = {	"w": tile.y,
+					"nw": tile.y - 0.75*tile.side_length,
+					"ne": tile.y - 0.75*tile.side_length,
+					"e": tile.y,
+					"se": tile.y + 0.75*tile.side_length,
+					"sw": tile.y + 0.75*tile.side_length}
+		self.start_point = (tile.x, tile.y)
+		self.end_point = (side_xs[self.end_side], side_ys[self.end_side])
+
 class RiverSegment:
-	def __init__(self, tile, side_1, side_2):
+	def __init__(self, tile):
 		self.start = None
 		self.end = None
 		
-		self.start_side = side_1
-		self.end_side = side_2
-		self.setCoords(tile)
+		self.start_side = None
+		self.end_side = None
 		self.gui_id = None
 
 	def setCoords(self, tile):
@@ -30,7 +51,7 @@ class RiverSegment:
 		self.end_point = (side_xs[self.end_side], side_ys[self.end_side])
 
 class Tile:
-	side_length = 60
+	side_length = 15
 	def __init__(self, iterator_state=False):
 		#neighbour compass directions
 		self.e = None
@@ -60,6 +81,10 @@ class Tile:
 		#is plotted on canvas
 		self.gui_active = False
 
+		#was ever plotted
+		self.was_plotted = False
+
+	'''
 	def setRivers(self):
 		river_add_probability = 0.1
 		def indexToSide(index):
@@ -91,10 +116,10 @@ class Tile:
 						added_river = True
 		
 		if not added_river and numpy.random.random() < river_add_probability:
-			end = numpy.random.choice( [i for i in range(6) if indexToNeighbour(self, i) == None] )
+			end = numpy.random.choice( [i for i in range(6) if (indexToNeighbour(self,i) != None and not indexToNeighbour(self, i).was_plotted) ] )
 			start = numpy.random.choice([i for i in range(6) if i != end])
 			self.rivers.append( RiverSegment(self, indexToSide(start), indexToSide(end) ) )
-
+		'''
 
 	def getExistingNeighbours(self):
 		'''Returns iterator of neighbouring tiles, which are not None.'''
@@ -118,6 +143,10 @@ class Tile:
 
 	def deactivate(self):
 		self.gui_active = False
+
+	def isRiverStart(self):
+		if numpy.random.random() > 0.98:	return True
+		return False
 
 class Map:
 	def __init__(self, centre_x :int, centre_y :int):
@@ -191,33 +220,103 @@ class Map:
 					if -1 < rand_shift < 1:	tile.altitude = rand_shift
 
 
+	def makeRivers(self, river_tiles):
+		def indexToSide(index):
+			sides = ["w", "nw", "ne", "e", "se", "sw"]
+			return sides[index]
+		def sideToIndex(side):
+			indices = {"w": 0, "nw": 1, "ne": 2, "e": 3, "se": 4, "sw": 5}
+			return indices[side]
+		def indexToNeighbour(tile, index):
+			neighbours = [tile.w, tile.nw, tile.ne, tile.e, tile.se, tile.sw]
+			return neighbours[index]
+		
+		while river_tiles != []:
+			river_tile, river = river_tiles.pop()
+			if river_tile.altitude <= 0:	
+				river_tile.rivers = []
+				continue
+
+			possible_directions = [i for i in range(6)	if indexToNeighbour(river_tile, i) != None
+														and not indexToNeighbour(river_tile, i).was_plotted
+														and river_tile.altitude >= indexToNeighbour(river_tile, i).altitude]
+			
+			if possible_directions == []:
+				river.end_side = indexToSide(numpy.random.randint(0,6))
+				river.setCoords(river_tile)
+				continue
+			else:
+				'''
+				altitudes = [numpy.exp(-indexToNeighbour(river_tile, i).altitude) for i in possible_directions]
+				sum_altitudes = sum(altitudes)
+				probability_distribution = [ altitude / sum_altitudes for altitude in altitudes]
+				direction = numpy.random.choice(possible_directions, p=probability_distribution)
+				'''
+			
+				'''
+				direction, smallest_altitude = None, numpy.Infinity
+				for i in possible_directions:
+					if indexToNeighbour(river_tile, i).altitude < smallest_altitude:
+						smallest_altitude = indexToNeighbour(river_tile, i).altitude
+						direction = i
+				'''
+
+				direction = numpy.random.choice(possible_directions)
+						
+					
+			new_river_tile = indexToNeighbour(river_tile, direction)
+			river.end_side = indexToSide(direction)
+			river.setCoords(river_tile)
+
+			if new_river_tile.altitude >= 0:
+				if new_river_tile.rivers != [] or numpy.random.random() < 0:	#stop
+					new_river = RiverVertex(new_river_tile)
+					new_river_tile.rivers.append(new_river)
+					river.end = new_river
+					new_river.end = river
+					new_river.end_side = indexToSide( (direction+3)%6 )
+					new_river.setCoords(new_river_tile)
+				else:
+					new_river = RiverSegment(new_river_tile)
+					new_river_tile.rivers.append(new_river)
+					river.end = new_river
+					new_river.start = river
+					new_river.start_side = indexToSide( (direction+3)%6 )
+					river_tiles.append( (new_river_tile, new_river) )
+
+
+
 	def generateGraph(self, gui):
+
+		river_tiles = []
 
 		tile = self.boundary_tiles["left"][len(self.boundary_tiles["left"])//2]
 		while gui.isTileOnScreen(tile):
-			self.generateLeftSide(gui)
+			river_tiles += self.generateLeftSide(gui)
 			tile = self.boundary_tiles["left"][len(self.boundary_tiles["left"])//2]
 		
 		tile = self.boundary_tiles["up"][len(self.boundary_tiles["up"])//2]
 		while gui.isTileOnScreen(tile):
-			self.generateUpSide(gui)
+			river_tiles += self.generateUpSide(gui)
 			tile = self.boundary_tiles["up"][len(self.boundary_tiles["up"])//2]
 
 		tile = self.boundary_tiles["right"][len(self.boundary_tiles["right"])//2]
 		while gui.isTileOnScreen(tile):
-			self.generateRightSide(gui)
+			river_tiles += self.generateRightSide(gui)
 			tile = self.boundary_tiles["right"][len(self.boundary_tiles["right"])//2]
 
 		tile = self.boundary_tiles["down"][len(self.boundary_tiles["down"])//2]
 		while gui.isTileOnScreen(tile):
-			self.generateDownSide(gui)
+			river_tiles += self.generateDownSide(gui)
 			tile = self.boundary_tiles["down"][len(self.boundary_tiles["down"])//2]
-
+		
 		self.updateSandpiles( list(self.tileIterator()) )
+		self.makeRivers(river_tiles)
 
 
 	def generateLeftSide(self, gui):
 		new_boundary_tiles = []
+		river_tiles = []
 		uppermost_boundary_tile = self.boundary_tiles["left"][0]
 		iterator_state = uppermost_boundary_tile.iterator_state
 		
@@ -233,7 +332,6 @@ class Map:
 			uppermost_boundary_tile.sw.nw = new_uppermost_tile
 			new_uppermost_tile.se = uppermost_boundary_tile.sw
 
-		new_uppermost_tile.setRivers()
 		new_boundary_tiles.append(new_uppermost_tile)
 
 		for tile in self.boundary_tiles["left"][1:]:
@@ -255,16 +353,24 @@ class Map:
 			if tile.sw != None:
 				tile.sw.nw = new_tile
 				new_tile.se = tile.sw
-
-			new_tile.setRivers()
+			
+			if new_tile.isRiverStart():
+				river = RiverVertex(new_tile)
+				new_tile.rivers.append(river)
+				river_tiles.append( (new_tile, river) )
+			
 			new_boundary_tiles.append(new_tile)
 		
 		self.boundary_tiles["left"] = new_boundary_tiles
 		self.boundary_tiles["up"].insert(0, new_boundary_tiles[0])
 		self.boundary_tiles["down"].insert(0, new_boundary_tiles[-1])
 
+		return river_tiles
+
 	def generateRightSide(self, gui):
 		new_boundary_tiles = []
+		river_tiles = []
+
 		uppermost_boundary_tile = self.boundary_tiles["right"][0]
 		iterator_state = uppermost_boundary_tile.iterator_state
 		
@@ -280,7 +386,6 @@ class Map:
 			uppermost_boundary_tile.se.ne = new_uppermost_tile
 			new_uppermost_tile.nw = uppermost_boundary_tile.se
 
-		new_uppermost_tile.setRivers()
 		new_boundary_tiles.append(new_uppermost_tile)
 
 		for tile in self.boundary_tiles["right"][1:]:
@@ -302,17 +407,24 @@ class Map:
 			if tile.se != None:
 				tile.se.ne = new_tile
 				new_tile.sw = tile.se
+			
+			if new_tile.isRiverStart():
+				river = RiverVertex(new_tile)
+				new_tile.rivers.append(river)
+				river_tiles.append( (new_tile, river) )
 
-			new_tile.setRivers()
 			new_boundary_tiles.append(new_tile)
 		
 		self.boundary_tiles["right"] = new_boundary_tiles
 		self.boundary_tiles["up"].append(new_boundary_tiles[0])
 		self.boundary_tiles["down"].append(new_boundary_tiles[-1])
 
+		return river_tiles
+
 
 	def generateUpSide(self, gui):
 		new_boundary_tiles = []
+		river_tiles = []
 		leftmost_boundary_tile = self.boundary_tiles["up"][0]
 		iterator_state = leftmost_boundary_tile.iterator_state
 		
@@ -325,7 +437,6 @@ class Map:
 			new_leftmost_tile.se = leftmost_boundary_tile
 			leftmost_boundary_tile.nw = new_leftmost_tile
 
-			new_leftmost_tile.setRivers()
 			new_boundary_tiles.append(new_leftmost_tile)
 
 		for tile in self.boundary_tiles["up"][1:]:
@@ -344,7 +455,11 @@ class Map:
 				new_tile.w = tile.w.nw
 				tile.w.nw.e = new_tile
 
-			new_tile.setRivers()
+			if new_tile.isRiverStart():
+				river = RiverVertex(new_tile)
+				new_tile.rivers.append(river)
+				river_tiles.append( (new_tile, river) )
+
 			new_boundary_tiles.append(new_tile)
 		
 		rightmost_boundary_tile = self.boundary_tiles["up"][-1]
@@ -360,14 +475,16 @@ class Map:
 			new_rightmost_tile.w = rightmost_boundary_tile.nw
 			rightmost_boundary_tile.nw.e = new_rightmost_tile
 
-			new_rightmost_tile.setRivers()
 			new_boundary_tiles.append(new_rightmost_tile)
 		
 		self.boundary_tiles["up"] = new_boundary_tiles
 		self.boundary_tiles["left"].insert(0, new_boundary_tiles[0])
 		self.boundary_tiles["right"].insert(0, new_boundary_tiles[-1])
 
+		return river_tiles
+
 	def generateDownSide(self, gui):
+		river_tiles = []
 		new_boundary_tiles = []
 		leftmost_boundary_tile = self.boundary_tiles["down"][0]
 		iterator_state = leftmost_boundary_tile.iterator_state
@@ -381,7 +498,6 @@ class Map:
 			new_leftmost_tile.ne = leftmost_boundary_tile
 			leftmost_boundary_tile.sw = new_leftmost_tile
 
-			new_leftmost_tile.setRivers()
 			new_boundary_tiles.append(new_leftmost_tile)
 
 		for tile in self.boundary_tiles["down"][1:]:
@@ -400,7 +516,11 @@ class Map:
 				new_tile.w = tile.w.sw
 				tile.w.sw.e = new_tile
 
-			new_tile.setRivers()
+			if new_tile.isRiverStart():
+				river = RiverVertex(new_tile)
+				new_tile.rivers.append(river)
+				river_tiles.append( (new_tile, river) )
+
 			new_boundary_tiles.append(new_tile)
 		
 		rightmost_boundary_tile = self.boundary_tiles["down"][-1]
@@ -416,9 +536,10 @@ class Map:
 			new_rightmost_tile.w = rightmost_boundary_tile.sw
 			rightmost_boundary_tile.sw.e = new_rightmost_tile
 
-			new_rightmost_tile.setRivers()
 			new_boundary_tiles.append(new_rightmost_tile)
 		
 		self.boundary_tiles["down"] = new_boundary_tiles
 		self.boundary_tiles["left"].append(new_boundary_tiles[0])
 		self.boundary_tiles["right"].append(new_boundary_tiles[-1])
+
+		return river_tiles
