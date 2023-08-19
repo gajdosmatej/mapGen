@@ -28,7 +28,8 @@ class WindowHandler:
 			tile.activate()
 			#self.plotTile(tile, self.getColourOfTile(tile))
 			self.plotTile(tile, self.getColourOfTile(tile))
-
+			for river in tile.rivers:
+				self.plotRiver(river)
 
 		#create triggers that will move the map when WASD keyboard keys are pressed
 		self.root.bind("<KeyPress-w>", lambda event, gui=self: gui.moveMap(mapObj, 0, self.move_speed))
