@@ -1,8 +1,31 @@
 from collections import deque
 import numpy
 
+class RiverSegment:
+	def __init__(self, tile, side_1, side_2):
+		self.start = None
+		self.end = None
+
+		side_xs = {	"w": tile.x - 0.866*tile.side_length,
+					"nw": tile.x - 0.5*0.866*tile.side_length,
+					"ne": tile.x + 0.5*0.866*tile.side_length,
+					"e": tile.x + 0.866*tile.side_length,
+					"se": tile.x + 0.5*0.866*tile.side_length,
+					"sw": tile.x - 0.5*0.866*tile.side_length}
+		side_ys = {	"w": tile.y,
+					"nw": tile.y - 0.75*tile.side_length,
+					"ne": tile.y - 0.75*tile.side_length,
+					"e": tile.y,
+					"se": tile.y + 0.75*tile.side_length,
+					"sw": tile.y + 0.75*tile.side_length}
+		
+
+		self.start_point = (side_xs[side_1], side_ys[side_1])
+		self.mid_point = (tile.x, tile.y)
+		self.end_point = (side_xs[side_2], side_ys[side_2])
+
 class Tile:
-	side_length = 15
+	side_length = 60
 	def __init__(self, iterator_state=False):
 		#neighbour compass directions
 		self.e = None

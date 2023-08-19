@@ -1,5 +1,5 @@
 import tkinter
-from map import Map, Tile
+from map import Map, Tile, RiverSegment
 import numpy
 
 class WindowHandler:
@@ -29,6 +29,7 @@ class WindowHandler:
 			#self.plotTile(tile, self.getColourOfTile(tile))
 			self.plotTile(tile, self.getColourOfTile(tile))
 
+
 		#create triggers that will move the map when WASD keyboard keys are pressed
 		self.root.bind("<KeyPress-w>", lambda event, gui=self: gui.moveMap(mapObj, 0, self.move_speed))
 		self.root.bind("<KeyPress-a>", lambda event, gui=self: gui.moveMap(mapObj, self.move_speed, 0))
@@ -53,6 +54,11 @@ class WindowHandler:
 					tile.x-0.866*tile.side_length, tile.y+0.5*tile.side_length,
 					tile.x-0.866*tile.side_length, tile.y-0.5*tile.side_length]		
 		tile.gui_id = self.canvas.create_polygon(points, outline='black', fill=background_colour, width=2)
+
+	def plotRiver(self, river):
+		#self.canvas.create_line(river.start_point, river.mid_point, width=3, fill="#FFFFFF")
+		#self.canvas.create_line(river.mid_point, river.end_point, width=3, fill="#FFFFFF")
+		self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#FFFFFF")
 
 	def hideTile(self, tile :Tile):
 		'''
