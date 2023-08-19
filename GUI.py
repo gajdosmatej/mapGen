@@ -14,8 +14,8 @@ class WindowHandler:
 		self.move_speed = 8
 
 		#create tkinter canvas inside the window
-		self.canv_width = self.screen_width // 2
-		self.canv_height = self.screen_height // 2
+		self.canv_width = self.screen_width // 1.5
+		self.canv_height = self.screen_height // 1.5
 		self.canvas = tkinter.Canvas(self.root, height=self.canv_height, width=self.canv_width)
 		self.canvas.pack()
 		

@@ -52,7 +52,7 @@ class RiverSegment:
 		self.end_point = (side_xs[self.end_side], side_ys[self.end_side])
 
 class Tile:
-	side_length = 15
+	side_length = 20
 	def __init__(self, iterator_state=False):
 		#neighbour compass directions
 		self.e = None
@@ -219,7 +219,7 @@ class Map:
 				if neighbours != []:
 					average_neighbouring_altitude = sum(neighbour.altitude for neighbour in neighbours) / len(list(neighbours))
 					tile.altitude = (tile.altitude + alpha*average_neighbouring_altitude) / (1+alpha)
-					rand_shift = tile.altitude + beta*numpy.random.random()
+					rand_shift = tile.altitude + beta*numpy.random.uniform(-1,1)
 					if -1 < rand_shift < 1:	tile.altitude = rand_shift
 
 
