@@ -55,12 +55,12 @@ class Tile:
 	side_length = 20
 	def __init__(self, iterator_state=False):
 		#neighbour compass directions
-		self.e = None
-		self.ne = None
-		self.nw = None
-		self.w = None
-		self.sw = None
-		self.se = None
+		self.neighbours = {	"w": None,
+							"nw": None,
+							"ne": None,
+							"e": None,
+							"se": None,
+							"sw": None}
 
 		#tile biome parameters
 		self.altitude = None
@@ -86,56 +86,14 @@ class Tile:
 		#was ever plotted
 		self.was_plotted = False
 
-	'''
-	def setRivers(self):
-		river_add_probability = 0.1
-		def indexToSide(index):
-			sides = ["w", "nw", "ne", "e", "se", "sw"]
-			return sides[index]
-		def sideToIndex(side):
-			indices = {"w": 0, "nw": 1, "ne": 2, "e": 3, "se": 4, "sw": 5}
-			return indices[side]
-		def indexToNeighbour(tile, index):
-			neighbours = [tile.w, tile.nw, tile.ne, tile.e, tile.se, tile.sw]
-			return neighbours[index]
-		
-		added_river = False
-		for i in range(6):
-			neighbour = indexToNeighbour(self, i)
-			if neighbour != None:
-				for river in neighbour.rivers:
-					if river.start_side == indexToSide( (i+3)%6 ):
-						new_river = RiverSegment(self, indexToSide( numpy.random.choice([j for j in range(6) if j != i]) ), indexToSide(i))
-						river.start = new_river
-						new_river.end = river
-						self.rivers.append(new_river)
-						added_river = True
-					elif river.end_side == indexToSide( (i+3)%6 ):
-						new_river = RiverSegment(self, indexToSide(i), indexToSide( numpy.random.choice([j for j in range(6) if j != i]) ))
-						river.end = new_river
-						new_river.start = river
-						self.rivers.append(new_river)
-						added_river = True
-		
-		if not added_river and numpy.random.random() < river_add_probability:
-			end = numpy.random.choice( [i for i in range(6) if (indexToNeighbour(self,i) != None and not indexToNeighbour(self, i).was_plotted) ] )
-			start = numpy.random.choice([i for i in range(6) if i != end])
-			self.rivers.append( RiverSegment(self, indexToSide(start), indexToSide(end) ) )
-		'''
 
 	def getExistingNeighbours(self):
-		'''Returns iterator of neighbouring tiles, which are not None.'''
-		neighbours = [self.w, self.nw, self.ne, self.e, self.se, self.sw]
-		return filter(lambda tile: tile != None, neighbours)
+		'''Returns dictionary of neighbouring tiles, which are not None.'''
+		return {key: value for key, value in self.neighbours.items() if value != None}
 
 
 	def setAltitude(self):
-		'''existing_neighbours = self.getExistingNeighbours()
-		existing_altitudes = [tile.altitude for tile in existing_neighbours]
-		self.altitude = 0.3*(numpy.random.random()-0.5)
-		if existing_neighbours:
-			self.altitude += sum(existing_altitudes) / len(existing_altitudes)
-		'''
+
 		#self.altitude = numpy.random.uniform(-1,1)
 		self.altitude = 1
 		if numpy.random.random() > 0.5:	self.altitude = -self.altitude
@@ -158,12 +116,6 @@ class Map:
 		self.centre_tile.y = centre_y
 		self.centre_tile.setAltitude()
 		self.boundary_tiles = {"left": [self.centre_tile], "up": [self.centre_tile], "right": [self.centre_tile], "down": [self.centre_tile]}
-	
-	#EXPERIMENTAL
-	def plotAllBounds(self, gui):
-		for tile in self.tileIterator():
-			for neighbour in tile.getExistingNeighbours():
-				gui.canvas.create_line((tile.x, tile.y), (neighbour.x, neighbour.y))
 
 
 	def tileIterator(self, active_only = False):	#active_only ... those that are rendered
@@ -177,12 +129,12 @@ class Map:
 		while queue:
 			tile = queue.popleft()
 			not_visited_tiles = []
-			if tile.w and tile.w.iterator_state == old_state and conditionFunc(tile.w):	not_visited_tiles.append(tile.w)
-			if tile.nw and tile.nw.iterator_state == old_state and conditionFunc(tile.nw):	not_visited_tiles.append(tile.nw)
-			if tile.ne and tile.ne.iterator_state == old_state and conditionFunc(tile.ne):	not_visited_tiles.append(tile.ne)
-			if tile.e and tile.e.iterator_state == old_state and conditionFunc(tile.e):	not_visited_tiles.append(tile.e)
-			if tile.se and tile.se.iterator_state == old_state and conditionFunc(tile.se):	not_visited_tiles.append(tile.se)
-			if tile.sw and tile.sw.iterator_state == old_state and conditionFunc(tile.sw):	not_visited_tiles.append(tile.sw)
+			if tile.neighbours["w"] and tile.neighbours["w"].iterator_state == old_state and conditionFunc(tile.neighbours["w"]):	not_visited_tiles.append(tile.neighbours["w"])
+			if tile.neighbours["nw"] and tile.neighbours["nw"].iterator_state == old_state and conditionFunc(tile.neighbours["nw"]):	not_visited_tiles.append(tile.neighbours["nw"])
+			if tile.neighbours["ne"] and tile.neighbours["ne"].iterator_state == old_state and conditionFunc(tile.neighbours["ne"]):	not_visited_tiles.append(tile.neighbours["ne"])
+			if tile.neighbours["e"] and tile.neighbours["e"].iterator_state == old_state and conditionFunc(tile.neighbours["e"]):	not_visited_tiles.append(tile.neighbours["e"])
+			if tile.neighbours["se"] and tile.neighbours["se"].iterator_state == old_state and conditionFunc(tile.neighbours["se"]):	not_visited_tiles.append(tile.neighbours["se"])
+			if tile.neighbours["sw"] and tile.neighbours["sw"].iterator_state == old_state and conditionFunc(tile.neighbours["sw"]):	not_visited_tiles.append(tile.neighbours["sw"])
 			for new_tile in not_visited_tiles:
 				new_tile.iterator_state = new_state
 				queue.append(new_tile)
@@ -200,7 +152,8 @@ class Map:
 		curr_dist = squareDistCentre(self.centre_tile)
 		
 		#go through the current centre_tile's neighbours, if a neighbour is closer to the canvas centre, make it the new centre_tile
-		for neighbour in self.centre_tile.getExistingNeighbours():
+		for key in self.centre_tile.getExistingNeighbours():
+			neighbour = self.centre_tile.neighbours[key]
 			if squareDistCentre(neighbour) < curr_dist:	
 				self.centre_tile = neighbour
 				curr_dist = squareDistCentre(neighbour)
@@ -215,9 +168,9 @@ class Map:
 		beta=0.01
 		for i in range(5):
 			for tile in tiles:
-				neighbours = list( tile.getExistingNeighbours() )
-				if neighbours != []:
-					average_neighbouring_altitude = sum(neighbour.altitude for neighbour in neighbours) / len(list(neighbours))
+				neighbours = tile.getExistingNeighbours()
+				if neighbours != {}:
+					average_neighbouring_altitude = sum(neighbours[key].altitude for key in neighbours) / len(neighbours)
 					tile.altitude = (tile.altitude + alpha*average_neighbouring_altitude) / (1+alpha)
 					rand_shift = tile.altitude + beta*numpy.random.uniform(-1,1)
 					if -1 < rand_shift < 1:	tile.altitude = rand_shift
@@ -230,16 +183,15 @@ class Map:
 		def sideToIndex(side):
 			indices = {"w": 0, "nw": 1, "ne": 2, "e": 3, "se": 4, "sw": 5}
 			return indices[side]
-		def indexToNeighbour(tile, index):
-			neighbours = [tile.w, tile.nw, tile.ne, tile.e, tile.se, tile.sw]
-			return neighbours[index]
+		
+		opposing_sides = {"w": "e", "nw": "se", "ne": "sw", "e": "w", "se": "nw", "sw": "ne"}
 		
 		while river_tiles != []:
 			river_tile, river = river_tiles.pop()
 
-			possible_directions = [i for i in range(6)	if indexToNeighbour(river_tile, i) != None
-														and not indexToNeighbour(river_tile, i).was_plotted
-														and river_tile.altitude >= indexToNeighbour(river_tile, i).altitude]
+			possible_directions = [key for key in river_tile.neighbours	if river_tile.neighbours[key] != None
+														and not river_tile.neighbours[key].was_plotted
+														and river_tile.altitude >= river_tile.neighbours[key].altitude]
 			
 			if possible_directions == []:
 				river.end_side = indexToSide(numpy.random.randint(0,6))
@@ -247,26 +199,10 @@ class Map:
 				river_tile.is_lake = True
 				continue
 			else:
-				'''
-				altitudes = [numpy.exp(-indexToNeighbour(river_tile, i).altitude) for i in possible_directions]
-				sum_altitudes = sum(altitudes)
-				probability_distribution = [ altitude / sum_altitudes for altitude in altitudes]
-				direction = numpy.random.choice(possible_directions, p=probability_distribution)
-				'''
-			
-				'''
-				direction, smallest_altitude = None, numpy.Infinity
-				for i in possible_directions:
-					if indexToNeighbour(river_tile, i).altitude < smallest_altitude:
-						smallest_altitude = indexToNeighbour(river_tile, i).altitude
-						direction = i
-				'''
-
 				direction = numpy.random.choice(possible_directions)
 						
-					
-			new_river_tile = indexToNeighbour(river_tile, direction)
-			river.end_side = indexToSide(direction)
+			new_river_tile = river_tile.neighbours[direction]
+			river.end_side = direction
 			river.setCoords(river_tile)
 
 			if new_river_tile.altitude >= 0:
@@ -275,14 +211,14 @@ class Map:
 					new_river_tile.rivers.append(new_river)
 					river.end = new_river
 					new_river.end = river
-					new_river.end_side = indexToSide( (direction+3)%6 )
+					new_river.end_side = opposing_sides[direction]
 					new_river.setCoords(new_river_tile)
 				else:
 					new_river = RiverSegment(new_river_tile)
 					new_river_tile.rivers.append(new_river)
 					river.end = new_river
 					new_river.start = river
-					new_river.start_side = indexToSide( (direction+3)%6 )
+					new_river.start_side = opposing_sides[direction]
 					river_tiles.append( (new_river_tile, new_river) )
 
 
@@ -332,12 +268,12 @@ class Map:
 		new_uppermost_tile.x = uppermost_boundary_tile.x - 2*0.866*uppermost_boundary_tile.side_length
 		new_uppermost_tile.y = uppermost_boundary_tile.y
 
-		new_uppermost_tile.e = uppermost_boundary_tile
-		uppermost_boundary_tile.w = new_uppermost_tile
+		new_uppermost_tile.neighbours["e"] = uppermost_boundary_tile
+		uppermost_boundary_tile.neighbours["w"] = new_uppermost_tile
 
-		if uppermost_boundary_tile.sw != None:
-			uppermost_boundary_tile.sw.nw = new_uppermost_tile
-			new_uppermost_tile.se = uppermost_boundary_tile.sw
+		if uppermost_boundary_tile.neighbours["sw"] != None:
+			uppermost_boundary_tile.neighbours["sw"].neighbours["nw"] = new_uppermost_tile
+			new_uppermost_tile.neighbours["se"] = uppermost_boundary_tile.neighbours["sw"]
 
 		new_boundary_tiles.append(new_uppermost_tile)
 
@@ -347,19 +283,19 @@ class Map:
 			new_tile.x = tile.x - 2*0.866*tile.side_length
 			new_tile.y = tile.y
 
-			new_tile.e = tile
-			tile.w = new_tile
+			new_tile.neighbours["e"] = tile
+			tile.neighbours["w"] = new_tile
 			
-			tile.nw.sw = new_tile
-			new_tile.ne = tile.nw
+			tile.neighbours["nw"].neighbours["sw"] = new_tile
+			new_tile.neighbours["ne"] = tile.neighbours["nw"]
 
-			if tile.nw.w != None:
-				tile.nw.w.se = new_tile
-				new_tile.nw = tile.nw.w
+			if tile.neighbours["nw"].neighbours["w"] != None:
+				tile.neighbours["nw"].neighbours["w"].neighbours["se"] = new_tile
+				new_tile.neighbours["nw"] = tile.neighbours["nw"].neighbours["w"]
 
-			if tile.sw != None:
-				tile.sw.nw = new_tile
-				new_tile.se = tile.sw
+			if tile.neighbours["sw"] != None:
+				tile.neighbours["sw"].neighbours["nw"] = new_tile
+				new_tile.neighbours["se"] = tile.neighbours["sw"]
 			
 			new_boundary_tiles.append(new_tile)
 		
@@ -381,12 +317,12 @@ class Map:
 		new_uppermost_tile.x = uppermost_boundary_tile.x + 2*0.866*uppermost_boundary_tile.side_length
 		new_uppermost_tile.y = uppermost_boundary_tile.y
 
-		new_uppermost_tile.w = uppermost_boundary_tile
-		uppermost_boundary_tile.e = new_uppermost_tile
+		new_uppermost_tile.neighbours["w"] = uppermost_boundary_tile
+		uppermost_boundary_tile.neighbours["e"] = new_uppermost_tile
 
-		if uppermost_boundary_tile.se != None:
-			uppermost_boundary_tile.se.ne = new_uppermost_tile
-			new_uppermost_tile.nw = uppermost_boundary_tile.se
+		if uppermost_boundary_tile.neighbours["se"] != None:
+			uppermost_boundary_tile.neighbours["se"].neighbours["ne"] = new_uppermost_tile
+			new_uppermost_tile.neighbours["nw"] = uppermost_boundary_tile.neighbours["se"]
 
 		new_boundary_tiles.append(new_uppermost_tile)
 
@@ -396,19 +332,19 @@ class Map:
 			new_tile.x = tile.x + 2*0.866*tile.side_length
 			new_tile.y = tile.y
 
-			new_tile.w = tile
-			tile.e = new_tile
+			new_tile.neighbours["w"] = tile
+			tile.neighbours["e"] = new_tile
 			
-			tile.ne.se = new_tile
-			new_tile.nw = tile.ne
+			tile.neighbours["ne"].neighbours["se"] = new_tile
+			new_tile.neighbours["nw"] = tile.neighbours["ne"]
 
-			if tile.ne.e != None:
-				tile.ne.e.sw = new_tile
-				new_tile.ne = tile.ne.e
+			if tile.neighbours["ne"].neighbours["e"] != None:
+				tile.neighbours["ne"].neighbours["e"].neighbours["sw"] = new_tile
+				new_tile.neighbours["ne"] = tile.neighbours["ne"].neighbours["e"]
 
-			if tile.se != None:
-				tile.se.ne = new_tile
-				new_tile.sw = tile.se
+			if tile.neighbours["se"] != None:
+				tile.neighbours["se"].neighbours["ne"] = new_tile
+				new_tile.neighbours["sw"] = tile.neighbours["se"]
 
 			new_boundary_tiles.append(new_tile)
 		
@@ -425,14 +361,14 @@ class Map:
 		leftmost_boundary_tile = self.boundary_tiles["up"][0]
 		iterator_state = leftmost_boundary_tile.iterator_state
 		
-		if leftmost_boundary_tile.sw != None:	
+		if leftmost_boundary_tile.neighbours["sw"] != None:	
 			new_leftmost_tile = Tile(iterator_state)
 			new_leftmost_tile.setAltitude()
 			new_leftmost_tile.x = leftmost_boundary_tile.x - 0.866*leftmost_boundary_tile.side_length
 			new_leftmost_tile.y = leftmost_boundary_tile.y - 1.5*leftmost_boundary_tile.side_length
 
-			new_leftmost_tile.se = leftmost_boundary_tile
-			leftmost_boundary_tile.nw = new_leftmost_tile
+			new_leftmost_tile.neighbours["se"] = leftmost_boundary_tile
+			leftmost_boundary_tile.neighbours["nw"] = new_leftmost_tile
 
 			new_boundary_tiles.append(new_leftmost_tile)
 
@@ -442,30 +378,30 @@ class Map:
 			new_tile.x = tile.x - 0.866*tile.side_length
 			new_tile.y = tile.y - 1.5*tile.side_length
 
-			new_tile.se = tile
-			tile.nw = new_tile
+			new_tile.neighbours["se"] = tile
+			tile.neighbours["nw"] = new_tile
 
-			tile.w.ne = new_tile
-			new_tile.sw = tile.w
+			tile.neighbours["w"].neighbours["ne"] = new_tile
+			new_tile.neighbours["sw"] = tile.neighbours["w"]
 
-			if tile.w.nw != None:
-				new_tile.w = tile.w.nw
-				tile.w.nw.e = new_tile
+			if tile.neighbours["w"].neighbours["nw"] != None:
+				new_tile.neighbours["w"] = tile.neighbours["w"].neighbours["nw"]
+				tile.neighbours["w"].neighbours["nw"].neighbours["e"] = new_tile
 
 			new_boundary_tiles.append(new_tile)
 		
 		rightmost_boundary_tile = self.boundary_tiles["up"][-1]
-		if rightmost_boundary_tile.se != None:
+		if rightmost_boundary_tile.neighbours["se"] != None:
 			new_rightmost_tile = Tile(iterator_state)
 			new_rightmost_tile.setAltitude()
 			new_rightmost_tile.x = rightmost_boundary_tile.x + 0.866*rightmost_boundary_tile.side_length
 			new_rightmost_tile.y = rightmost_boundary_tile.y - 1.5*rightmost_boundary_tile.side_length
 
-			new_rightmost_tile.sw = rightmost_boundary_tile
-			rightmost_boundary_tile.ne = new_rightmost_tile
+			new_rightmost_tile.neighbours["sw"] = rightmost_boundary_tile
+			rightmost_boundary_tile.neighbours["ne"] = new_rightmost_tile
 
-			new_rightmost_tile.w = rightmost_boundary_tile.nw
-			rightmost_boundary_tile.nw.e = new_rightmost_tile
+			new_rightmost_tile.neighbours["w"] = rightmost_boundary_tile.neighbours["nw"]
+			rightmost_boundary_tile.neighbours["nw"].neighbours["e"] = new_rightmost_tile
 
 			new_boundary_tiles.append(new_rightmost_tile)
 		
@@ -481,14 +417,14 @@ class Map:
 		leftmost_boundary_tile = self.boundary_tiles["down"][0]
 		iterator_state = leftmost_boundary_tile.iterator_state
 		
-		if leftmost_boundary_tile.nw != None:	
+		if leftmost_boundary_tile.neighbours["nw"] != None:	
 			new_leftmost_tile = Tile(iterator_state)
 			new_leftmost_tile.setAltitude()
 			new_leftmost_tile.x = leftmost_boundary_tile.x - 0.866*leftmost_boundary_tile.side_length
 			new_leftmost_tile.y = leftmost_boundary_tile.y + 1.5*leftmost_boundary_tile.side_length
 
-			new_leftmost_tile.ne = leftmost_boundary_tile
-			leftmost_boundary_tile.sw = new_leftmost_tile
+			new_leftmost_tile.neighbours["ne"] = leftmost_boundary_tile
+			leftmost_boundary_tile.neighbours["sw"] = new_leftmost_tile
 
 			new_boundary_tiles.append(new_leftmost_tile)
 
@@ -498,30 +434,30 @@ class Map:
 			new_tile.x = tile.x - 0.866*tile.side_length
 			new_tile.y = tile.y + 1.5*tile.side_length
 
-			new_tile.ne = tile
-			tile.sw = new_tile
+			new_tile.neighbours["ne"] = tile
+			tile.neighbours["sw"] = new_tile
 
-			tile.w.se = new_tile
-			new_tile.nw = tile.w
+			tile.neighbours["w"].neighbours["se"] = new_tile
+			new_tile.neighbours["nw"] = tile.neighbours["w"]
 
-			if tile.w.sw != None:
-				new_tile.w = tile.w.sw
-				tile.w.sw.e = new_tile
+			if tile.neighbours["w"].neighbours["sw"] != None:
+				new_tile.neighbours["w"] = tile.neighbours["w"].neighbours["sw"]
+				tile.neighbours["w"].neighbours["sw"].neighbours["e"] = new_tile
 
 			new_boundary_tiles.append(new_tile)
 		
 		rightmost_boundary_tile = self.boundary_tiles["down"][-1]
-		if rightmost_boundary_tile.ne != None:
+		if rightmost_boundary_tile.neighbours["ne"] != None:
 			new_rightmost_tile = Tile(iterator_state)
 			new_rightmost_tile.setAltitude()
 			new_rightmost_tile.x = rightmost_boundary_tile.x + 0.866*rightmost_boundary_tile.side_length
 			new_rightmost_tile.y = rightmost_boundary_tile.y + 1.5*rightmost_boundary_tile.side_length
 
-			new_rightmost_tile.nw = rightmost_boundary_tile
-			rightmost_boundary_tile.se = new_rightmost_tile
+			new_rightmost_tile.neighbours["nw"] = rightmost_boundary_tile
+			rightmost_boundary_tile.neighbours["se"] = new_rightmost_tile
 
-			new_rightmost_tile.w = rightmost_boundary_tile.sw
-			rightmost_boundary_tile.sw.e = new_rightmost_tile
+			new_rightmost_tile.neighbours["w"] = rightmost_boundary_tile.neighbours["sw"]
+			rightmost_boundary_tile.neighbours["sw"].neighbours["e"] = new_rightmost_tile
 
 			new_boundary_tiles.append(new_rightmost_tile)
 		

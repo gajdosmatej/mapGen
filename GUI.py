@@ -6,6 +6,21 @@ class WindowHandler:
 	'''
 	Graphics interface class.
 	'''
+
+	tile_delta_xs = {	"w": -2*0.866, 
+						"nw": -0.866, 
+						"ne": 0.866, 
+						"e": 2*0.866, 
+						"se": 0.866, 
+						"sw": -0.866}
+				
+	tile_delta_ys = {	"w": 0, 
+						"nw": -1.5, 
+						"ne": -1.5, 
+						"e": 0, 
+						"se": 1.5, 
+						"sw": 1.5}
+
 	def __init__(self):
 		#initiate tkinter window and save its size
 		self.root = tkinter.Tk()
@@ -117,28 +132,26 @@ class WindowHandler:
 				to_deactivate.add(tile)
 			#the tile is on the screen
 			else:
-				neighbours = [tile.w, tile.nw, tile.ne, tile.e, tile.se, tile.sw]
-				delta_xs = [-2*0.866, -0.866, 0.866, 2*0.866, 0.866, -0.866]
-				delta_ys = [0, -1.5, -1.5, 0, 1.5, 1.5]
 
 				#look at all neighbours, update coordinates of those that are not rendered
-				for i in range(6):
-					if neighbours[i] != None and not neighbours[i].gui_active:
-						neighbours[i].x = tile.x + delta_xs[i]*tile.side_length
-						neighbours[i].y = tile.y + delta_ys[i]*tile.side_length
+				for key in tile.neighbours:
+					neighbour = tile.neighbours[key]
+					if neighbour != None and not neighbour.gui_active:
+						neighbour.x = tile.x + self.tile_delta_xs[key]*tile.side_length
+						neighbour.y = tile.y + self.tile_delta_ys[key]*tile.side_length
 						#if the neighbours' new coordinates are on the screen, render that tile
-						if self.isTileOnScreen(neighbours[i]):
-							to_activate.add(neighbours[i])
-							neighbours[i].iterator_state = tile.iterator_state
+						if self.isTileOnScreen(neighbour):
+							to_activate.add(neighbour)
+							neighbour.iterator_state = tile.iterator_state
 
 			#check, whether a visible tile is also on the map boundary
-			if tile.w == None:
+			if tile.neighbours["w"] == None:
 				need_new_layer["left"] = True
-			if tile.nw == None:
+			if tile.neighbours["nw"] == None:
 				need_new_layer["up"] = True
-			if tile.e == None:
+			if tile.neighbours["e"] == None:
 				need_new_layer["right"] = True
-			if tile.sw == None:
+			if tile.neighbours["sw"] == None:
 				need_new_layer["down"] = True
 
 		#unrender tiles that are newly off the screen
