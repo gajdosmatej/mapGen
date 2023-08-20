@@ -1,6 +1,82 @@
 from collections import deque
 import numpy
 
+
+class Tile:
+	'''
+	Class representing map tiles.
+	'''
+	
+	#length of tile side for plotting
+	side_length = 20
+
+	def __init__(self, iterator_state :bool = False):
+		'''
+		Constructor of Tile class.
+		@iterator_state (bool) ... Internal variable used for consistency when looping over map.
+		'''
+
+		#neighbour compass directions
+		self.neighbours = {	"w": None,
+							"nw": None,
+							"ne": None,
+							"e": None,
+							"se": None,
+							"sw": None}
+
+		#tile biome parameters
+		self.altitude = None
+		self.is_lake = False
+		self.rivers = []
+
+		self.setAltitude()
+
+		#centre coordinates
+		self.x = None
+		self.y = None
+
+		#fill colour of the tile
+		self.colour = "#FFFFFF"
+
+		#tkinter-canvas hexagon object
+		self.gui_id = None
+
+		#noting which tiles were already visited by iterator
+		self.iterator_state = iterator_state
+
+		#is plotted on canvas
+		self.gui_active = False
+
+		#was ever plotted
+		self.was_plotted = False
+
+
+	def getExistingNeighbours(self) -> dict:
+		'''
+		Returns dictionary of neighbouring tiles which are not None.
+		'''
+
+		return {key: value for key, value in self.neighbours.items() if value != None}
+
+
+	def setAltitude(self):
+		'''
+		Sets first random altitude of this tile, which is later updated by Map._updateSandpiles_.
+		'''
+
+		self.altitude = numpy.random.choice([-1, 1])
+
+
+	def isRiverStart(self):
+		'''
+		Determines, whether a river should have a source in this tile.
+		'''
+
+		k = 0.1
+		if numpy.random.random() < k*self.altitude:	return True
+		return False
+
+
 class RiverVertex:
 	'''
 	Class representing river starts and ends.
@@ -18,9 +94,11 @@ class RiverVertex:
 		self.start_point = None
 		self.end_point = None
 
-	def setCoords(self, tile):
+
+	def setCoords(self, tile :Tile):
 		'''
-		Sets coordinates of this river part boundary points for line plotting.
+		Sets coordinates of this river part boundary points for line plotting. Should be called after this object's @end_side is set.
+		@tile (Tile) ... The tile in which this river is located.
 		'''
 
 		side_xs = {	"w": tile.x - 0.866*tile.side_length,
@@ -59,7 +137,8 @@ class RiverSegment:
 
 	def setCoords(self, tile):
 		'''
-		Sets coordinates of this river part points for line plotting.
+		Sets coordinates of this river part boundary points for line plotting. Should be called after this object's @start_side and @end_side is set.
+		@tile (Tile) ... The tile in which this river is located.
 		'''
 
 		side_xs = {	"w": tile.x - 0.866*tile.side_length,
@@ -79,107 +158,57 @@ class RiverSegment:
 		self.mid_point = (tile.x, tile.y)
 		self.end_point = (side_xs[self.end_side], side_ys[self.end_side])
 
-class Tile:
-	'''
-	Class representing map tiles.
-	'''
-	
-	#length of tile side for plotting
-	side_length = 20
-
-	def __init__(self, iterator_state :bool = False):
-		'''
-		Constructor of Tile class.
-		@iterator_state (bool) ... Internal variable used for consistency when looping over map.
-		'''
-
-		#neighbour compass directions
-		self.neighbours = {	"w": None,
-							"nw": None,
-							"ne": None,
-							"e": None,
-							"se": None,
-							"sw": None}
-
-		#tile biome parameters
-		self.altitude = None
-		self.is_lake = False
-		self.rivers = []
-
-		#centre coordinates
-		self.x = None
-		self.y = None
-
-		#fill colour of the tile
-		self.colour = "#FFFFFF"
-
-		#tkinter-canvas hexagon object
-		self.gui_id = None
-
-		#noting which tiles were already visited by iterator
-		self.iterator_state = iterator_state
-
-		#is plotted on canvas
-		self.gui_active = False
-
-		#was ever plotted
-		self.was_plotted = False
-
-
-	def getExistingNeighbours(self) -> dict:
-		'''
-		Returns dictionary of neighbouring tiles which are not None.
-		'''
-
-		return {key: value for key, value in self.neighbours.items() if value != None}
-
-
-	def setAltitude(self):
-
-		#self.altitude = numpy.random.uniform(-1,1)
-		self.altitude = 1
-		if numpy.random.random() > 0.5:	self.altitude = -self.altitude
-
-	def activate(self):
-		self.gui_active = True
-
-	def deactivate(self):
-		self.gui_active = False
-
-	def isRiverStart(self):
-		k = 0.1
-		if numpy.random.random() < k*self.altitude:	return True
-		return False
 
 class Map:
+	'''
+	Class representing the main map.
+	'''
+
 	def __init__(self, centre_x :int, centre_y :int):
+		'''
+		Constructor of Map class.
+		@centre_x (int) ... x coordinate of the GUI canvas' centre.
+		@centre_y (int) ... y coordinate of the GUI canvas' centre.
+		'''
+
+		#the nearest tile to the canvas' centre
 		self.centre_tile = Tile()
 		self.centre_tile.x = centre_x
 		self.centre_tile.y = centre_y
-		self.centre_tile.setAltitude()
+
+		#the tiles on the map edges
 		self.boundary_tiles = {"left": [self.centre_tile], "up": [self.centre_tile], "right": [self.centre_tile], "down": [self.centre_tile]}
 
 
-	def tileIterator(self, active_only = False):	#active_only ... those that are rendered
-		queue = deque()
-		def conditionFunc(tile):	return (not active_only) or tile.gui_active
-		queue.append(self.centre_tile)
+	def tileIterator(self, active_only = False):
+		'''
+		Iterator of the map tiles, which iterates over the whole map, or over the currently plotted tiles only, depending on the value of @active_only (bool).
+		'''
+
+		#iterator_state which marks the unvisited tiles
 		old_state = self.centre_tile.iterator_state
+
+		#iterator state which marks the visited tiles
 		new_state = not old_state
+
+		#initialise DFS
+		stack = []
+		def conditionFunc(tile):	return (not active_only) or tile.gui_active
+		stack.append(self.centre_tile)
 		self.centre_tile.iterator_state = new_state
 
-		while queue:
-			tile = queue.popleft()
+		#DFS
+		while stack != []:
+			tile = stack.pop()
 			not_visited_tiles = []
-			if tile.neighbours["w"] and tile.neighbours["w"].iterator_state == old_state and conditionFunc(tile.neighbours["w"]):	not_visited_tiles.append(tile.neighbours["w"])
-			if tile.neighbours["nw"] and tile.neighbours["nw"].iterator_state == old_state and conditionFunc(tile.neighbours["nw"]):	not_visited_tiles.append(tile.neighbours["nw"])
-			if tile.neighbours["ne"] and tile.neighbours["ne"].iterator_state == old_state and conditionFunc(tile.neighbours["ne"]):	not_visited_tiles.append(tile.neighbours["ne"])
-			if tile.neighbours["e"] and tile.neighbours["e"].iterator_state == old_state and conditionFunc(tile.neighbours["e"]):	not_visited_tiles.append(tile.neighbours["e"])
-			if tile.neighbours["se"] and tile.neighbours["se"].iterator_state == old_state and conditionFunc(tile.neighbours["se"]):	not_visited_tiles.append(tile.neighbours["se"])
-			if tile.neighbours["sw"] and tile.neighbours["sw"].iterator_state == old_state and conditionFunc(tile.neighbours["sw"]):	not_visited_tiles.append(tile.neighbours["sw"])
-			for new_tile in not_visited_tiles:
-				new_tile.iterator_state = new_state
-				queue.append(new_tile)
+
+			#look at the current tile's neighbours and add to stack those that exist, were not visited yet and (optionally) are currently plotted
+			for key in ["w", "nw", "ne", "e", "se", "sw"]:
+				neighbour = tile.neighbours[key]
+				if neighbour != None and neighbour.iterator_state == old_state and (neighbour.gui_active or not active_only):	
+					neighbour.iterator_state = new_state
+					stack.append(neighbour)
+
 			yield tile
 
 
@@ -302,7 +331,6 @@ class Map:
 		iterator_state = uppermost_boundary_tile.iterator_state
 		
 		new_uppermost_tile = Tile(iterator_state)
-		new_uppermost_tile.setAltitude()
 		new_uppermost_tile.x = uppermost_boundary_tile.x - 2*0.866*uppermost_boundary_tile.side_length
 		new_uppermost_tile.y = uppermost_boundary_tile.y
 
@@ -317,7 +345,6 @@ class Map:
 
 		for tile in self.boundary_tiles["left"][1:]:
 			new_tile = Tile(iterator_state)
-			new_tile.setAltitude()
 			new_tile.x = tile.x - 2*0.866*tile.side_length
 			new_tile.y = tile.y
 
@@ -351,7 +378,6 @@ class Map:
 		iterator_state = uppermost_boundary_tile.iterator_state
 		
 		new_uppermost_tile = Tile(iterator_state)
-		new_uppermost_tile.setAltitude()
 		new_uppermost_tile.x = uppermost_boundary_tile.x + 2*0.866*uppermost_boundary_tile.side_length
 		new_uppermost_tile.y = uppermost_boundary_tile.y
 
@@ -366,7 +392,6 @@ class Map:
 
 		for tile in self.boundary_tiles["right"][1:]:
 			new_tile = Tile(iterator_state)
-			new_tile.setAltitude()
 			new_tile.x = tile.x + 2*0.866*tile.side_length
 			new_tile.y = tile.y
 
@@ -401,7 +426,6 @@ class Map:
 		
 		if leftmost_boundary_tile.neighbours["sw"] != None:	
 			new_leftmost_tile = Tile(iterator_state)
-			new_leftmost_tile.setAltitude()
 			new_leftmost_tile.x = leftmost_boundary_tile.x - 0.866*leftmost_boundary_tile.side_length
 			new_leftmost_tile.y = leftmost_boundary_tile.y - 1.5*leftmost_boundary_tile.side_length
 
@@ -412,7 +436,6 @@ class Map:
 
 		for tile in self.boundary_tiles["up"][1:]:
 			new_tile = Tile(iterator_state)
-			new_tile.setAltitude()
 			new_tile.x = tile.x - 0.866*tile.side_length
 			new_tile.y = tile.y - 1.5*tile.side_length
 
@@ -431,7 +454,6 @@ class Map:
 		rightmost_boundary_tile = self.boundary_tiles["up"][-1]
 		if rightmost_boundary_tile.neighbours["se"] != None:
 			new_rightmost_tile = Tile(iterator_state)
-			new_rightmost_tile.setAltitude()
 			new_rightmost_tile.x = rightmost_boundary_tile.x + 0.866*rightmost_boundary_tile.side_length
 			new_rightmost_tile.y = rightmost_boundary_tile.y - 1.5*rightmost_boundary_tile.side_length
 
@@ -457,7 +479,6 @@ class Map:
 		
 		if leftmost_boundary_tile.neighbours["nw"] != None:	
 			new_leftmost_tile = Tile(iterator_state)
-			new_leftmost_tile.setAltitude()
 			new_leftmost_tile.x = leftmost_boundary_tile.x - 0.866*leftmost_boundary_tile.side_length
 			new_leftmost_tile.y = leftmost_boundary_tile.y + 1.5*leftmost_boundary_tile.side_length
 
@@ -468,7 +489,6 @@ class Map:
 
 		for tile in self.boundary_tiles["down"][1:]:
 			new_tile = Tile(iterator_state)
-			new_tile.setAltitude()
 			new_tile.x = tile.x - 0.866*tile.side_length
 			new_tile.y = tile.y + 1.5*tile.side_length
 
@@ -487,7 +507,6 @@ class Map:
 		rightmost_boundary_tile = self.boundary_tiles["down"][-1]
 		if rightmost_boundary_tile.neighbours["ne"] != None:
 			new_rightmost_tile = Tile(iterator_state)
-			new_rightmost_tile.setAltitude()
 			new_rightmost_tile.x = rightmost_boundary_tile.x + 0.866*rightmost_boundary_tile.side_length
 			new_rightmost_tile.y = rightmost_boundary_tile.y + 1.5*rightmost_boundary_tile.side_length
 

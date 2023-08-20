@@ -40,7 +40,7 @@ class WindowHandler:
 
 		#plot all the newly created tiles
 		for tile in mapObj.tileIterator():
-			tile.activate()
+			tile.gui_active = True
 			#self.plotTile(tile, self.getColourOfTile(tile))
 			self.plotTile(tile, self.getColourOfTile(tile))
 			for river in tile.rivers:
@@ -157,7 +157,7 @@ class WindowHandler:
 		#unrender tiles that are newly off the screen
 		for tile in to_deactivate:
 			#if tile.gui_active:
-			tile.deactivate()
+			tile.gui_active = False
 			self.hideTile(tile)
 			for river in tile.rivers:
 				self.hideRiver(river)
@@ -200,7 +200,7 @@ class WindowHandler:
 		#render tiles that are newly visible
 		for tile in to_activate:
 			#if not tile.gui_active:
-				tile.activate()
+				tile.gui_active = True
 				self.plotTile(tile, self.getColourOfTile(tile))
 				for river in tile.rivers:
 					river.setCoords(tile)
