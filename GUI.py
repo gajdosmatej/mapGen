@@ -169,7 +169,7 @@ class WindowHandler:
 		for key in ["left", "right", "up", "down"]:
 			for tile in mapObject.boundary_tiles[key]:
 				for river in tile.rivers:
-					if river.end == None:	river_tiles.append( (tile, river) )
+					if river.end_side == None:	river_tiles.append( (tile, river) )
 
 		if need_new_layer["up"]:
 			for _ in range(chunk_size):
@@ -192,7 +192,7 @@ class WindowHandler:
 		mapObject.updateSandpiles(new_tiles)
 		for tile in new_tiles:
 			if tile.isRiverStart():
-				river = RiverVertex(tile, is_start=True)
+				river = RiverVertex(is_start=True)
 				tile.rivers.append(river)
 				river_tiles.append( (tile, river) )
 		mapObject.makeRivers(river_tiles)

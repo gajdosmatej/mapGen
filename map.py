@@ -2,13 +2,27 @@ from collections import deque
 import numpy
 
 class RiverVertex:
-	def __init__(self, tile, is_start=False):
+	'''
+	Class representing river starts and ends.
+	'''
+
+	def __init__(self, is_start :bool = False):
+		'''
+		Constructor of RiverVertex class.
+		@is_start (bool) ... Whether this RiverVertex represents river's source (used only for plotting).
+		'''
+
 		self.is_start = is_start
-		self.end = None
 		self.end_side = None
 		self.gui_id = None
-	
+		self.start_point = None
+		self.end_point = None
+
 	def setCoords(self, tile):
+		'''
+		Sets coordinates of this river part boundary points for line plotting.
+		'''
+
 		side_xs = {	"w": tile.x - 0.866*tile.side_length,
 					"nw": tile.x - 0.5*0.866*tile.side_length,
 					"ne": tile.x + 0.5*0.866*tile.side_length,
@@ -21,19 +35,33 @@ class RiverVertex:
 					"e": tile.y,
 					"se": tile.y + 0.75*tile.side_length,
 					"sw": tile.y + 0.75*tile.side_length}
+
 		self.start_point = (tile.x, tile.y)
 		self.end_point = (side_xs[self.end_side], side_ys[self.end_side])
 
+
 class RiverSegment:
-	def __init__(self, tile):
-		self.start = None
-		self.end = None
-		
+	'''
+	Class representing river parts which are not its boundaries.
+	'''
+
+	def __init__(self):
+		'''
+		Constructor of RiverSegment class.
+		'''
+
 		self.start_side = None
 		self.end_side = None
 		self.gui_id = None
+		self.start_point = None
+		self.end_point = None
+
 
 	def setCoords(self, tile):
+		'''
+		Sets coordinates of this river part points for line plotting.
+		'''
+
 		side_xs = {	"w": tile.x - 0.866*tile.side_length,
 					"nw": tile.x - 0.5*0.866*tile.side_length,
 					"ne": tile.x + 0.5*0.866*tile.side_length,
@@ -52,8 +80,19 @@ class RiverSegment:
 		self.end_point = (side_xs[self.end_side], side_ys[self.end_side])
 
 class Tile:
+	'''
+	Class representing map tiles.
+	'''
+	
+	#length of tile side for plotting
 	side_length = 20
-	def __init__(self, iterator_state=False):
+
+	def __init__(self, iterator_state :bool = False):
+		'''
+		Constructor of Tile class.
+		@iterator_state (bool) ... Internal variable used for consistency when looping over map.
+		'''
+
 		#neighbour compass directions
 		self.neighbours = {	"w": None,
 							"nw": None,
@@ -87,8 +126,11 @@ class Tile:
 		self.was_plotted = False
 
 
-	def getExistingNeighbours(self):
-		'''Returns dictionary of neighbouring tiles, which are not None.'''
+	def getExistingNeighbours(self) -> dict:
+		'''
+		Returns dictionary of neighbouring tiles which are not None.
+		'''
+
 		return {key: value for key, value in self.neighbours.items() if value != None}
 
 
@@ -207,17 +249,13 @@ class Map:
 
 			if new_river_tile.altitude >= 0:
 				if new_river_tile.rivers != [] or numpy.random.random() < 0:	#stop
-					new_river = RiverVertex(new_river_tile, False)
+					new_river = RiverVertex(False)
 					new_river_tile.rivers.append(new_river)
-					river.end = new_river
-					new_river.end = river
 					new_river.end_side = opposing_sides[direction]
 					new_river.setCoords(new_river_tile)
 				else:
-					new_river = RiverSegment(new_river_tile)
+					new_river = RiverSegment()
 					new_river_tile.rivers.append(new_river)
-					river.end = new_river
-					new_river.start = river
 					new_river.start_side = opposing_sides[direction]
 					river_tiles.append( (new_river_tile, new_river) )
 
@@ -251,7 +289,7 @@ class Map:
 		
 		for tile in self.tileIterator():
 			if tile.isRiverStart():
-				river = RiverVertex(tile, True)
+				river = RiverVertex(True)
 				tile.rivers.append(river)
 				river_tiles.append( (tile, river) )
 		self.makeRivers(river_tiles)
