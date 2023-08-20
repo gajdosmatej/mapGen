@@ -214,80 +214,90 @@ class Map:
 
 	def updateCentreTile(self, centre_x :float, centre_y :float):
 		'''
-		Checks, whether there is a tile that is closer to the canvas centre than the current centre_tile. If there is that tile, it becomes new centre_tile.
+		Checks, whether there is a tile that is closer to the canvas centre than the current centre_tile. If there is that tile, it becomes map's new centre_tile.
 		@centre_x ... Canvas' centre x position.
 		@centre_y ... Canvas' centre y position.
 		'''
+
 		#squared standard euclidean distance from the canvas' centre
 		def squareDistCentre(tile):	return (tile.x - centre_x)**2 + (tile.y - centre_y)**2
+
 		curr_dist = squareDistCentre(self.centre_tile)
 		
-		#go through the current centre_tile's neighbours, if a neighbour is closer to the canvas centre, make it the new centre_tile
+		#go through the current centre_tile's neighbours; if a neighbour is closer to the canvas' centre, make it the new centre_tile
 		for key in self.centre_tile.getExistingNeighbours():
 			neighbour = self.centre_tile.neighbours[key]
-			if squareDistCentre(neighbour) < curr_dist:	
+			if squareDistCentre(neighbour) < curr_dist:
 				self.centre_tile = neighbour
 				curr_dist = squareDistCentre(neighbour)
 
 
 	def updateSandpiles(self, tiles :list[Tile]):
 		'''
-		Make the altitudes of @tiles more smooth by averaging tile altitude with its neighbours' altitudes.
-		@tiles ... List of tiles, which altitudes are being updated. 
+		Make the altitudes of @tiles (list[Tile]) more smooth by averaging tile altitude with its neighbours' altitudes. 
 		'''
-		alpha = 20
-		beta=0.01
-		for i in range(5):
+
+		alpha = 20	#larger alpha means that the new altitude less depends on the current altitude and more on the neighbours' altitude
+		beta=0.01	#larger beta means stronger effect of random change of altitude
+		n = 5	#number of iterations of this method's averaging algorithm
+
+		for _ in range(n):
 			for tile in tiles:
 				neighbours = tile.getExistingNeighbours()
-				if neighbours != {}:
-					average_neighbouring_altitude = sum(neighbours[key].altitude for key in neighbours) / len(neighbours)
-					tile.altitude = (tile.altitude + alpha*average_neighbouring_altitude) / (1+alpha)
-					rand_shift = tile.altitude + beta*numpy.random.uniform(-1,1)
-					if -1 < rand_shift < 1:	tile.altitude = rand_shift
+				average_neighbouring_altitude = sum(neighbours[key].altitude for key in neighbours) / len(neighbours)
+				tile.altitude = (tile.altitude + alpha*average_neighbouring_altitude) / (1+alpha)
+				rand_shift = tile.altitude + beta*numpy.random.uniform(-1,1)
+
+				#apply the random update only if the altitude is still bounded in [-1, 1]
+				if -1 < rand_shift < 1:	tile.altitude = rand_shift
 
 
-	def makeRivers(self, river_tiles):
-		def indexToSide(index):
-			sides = ["w", "nw", "ne", "e", "se", "sw"]
-			return sides[index]
-		def sideToIndex(side):
-			indices = {"w": 0, "nw": 1, "ne": 2, "e": 3, "se": 4, "sw": 5}
-			return indices[side]
+	def makeRivers(self, river_stack :list):
+		'''
+		Creates whole rivers from the @river_stack (list[ (Tile, RiverVertex || RiverSegment) ]) incomplete rivers and the tiles in which the rivers are contained. 
+		'''
 		
 		opposing_sides = {"w": "e", "nw": "se", "ne": "sw", "e": "w", "se": "nw", "sw": "ne"}
 		
-		while river_tiles != []:
-			river_tile, river = river_tiles.pop()
+		while river_stack != []:
+			river_tile, river = river_stack.pop()
 
+			#find the current river_tile's sides in which the altitude decreases (rivers usually flow downstream ;-;)
 			possible_directions = [key for key in river_tile.neighbours	if river_tile.neighbours[key] != None
 														and not river_tile.neighbours[key].was_plotted
 														and river_tile.altitude >= river_tile.neighbours[key].altitude]
 			
+			#the current river is located in local minimum of the map altitude function, so do not add it to river_tile.rivers and set the river_tile as lake instead 
 			if possible_directions == []:
-				river.end_side = indexToSide(numpy.random.randint(0,6))
-				river.setCoords(river_tile)
 				river_tile.is_lake = True
-				continue
+
 			else:
+				#add the current river to river_tile's river list (mainly for future plotting)
+				river_tile.rivers.append(river)
+
+				#choose randomly the direction in which the current river should flow
 				direction = numpy.random.choice(possible_directions)
-						
-			new_river_tile = river_tile.neighbours[direction]
-			river.end_side = direction
-			river.setCoords(river_tile)
+				
+				#set the direction to the current river
+				river.end_side = direction
+				river.setCoords(river_tile)
 
-			if new_river_tile.altitude >= 0:
-				if new_river_tile.rivers != [] or numpy.random.random() < 0:	#stop
-					new_river = RiverVertex(False)
-					new_river_tile.rivers.append(new_river)
-					new_river.end_side = opposing_sides[direction]
-					new_river.setCoords(new_river_tile)
-				else:
-					new_river = RiverSegment()
-					new_river_tile.rivers.append(new_river)
-					new_river.start_side = opposing_sides[direction]
-					river_tiles.append( (new_river_tile, new_river) )
 
+				#if there is no ocean in the direction, create new river part
+				new_river_tile = river_tile.neighbours[direction]
+				if new_river_tile.altitude >= 0:
+
+					#there is already a river in the new_river_tile, so end the current river's creation there with RiverVertex 
+					if new_river_tile.rivers != []:
+						new_river = RiverVertex(False)
+						new_river_tile.rivers.append(new_river)
+						new_river.end_side = opposing_sides[direction]
+						new_river.setCoords(new_river_tile)
+					#there is no river in the new_river_tile, so continue with the current'river's creation by adding new RiverSegment to the river_stack
+					else:
+						new_river = RiverSegment()
+						new_river.start_side = opposing_sides[direction]
+						river_stack.append( (new_river_tile, new_river) )
 
 
 	def generateGraph(self, gui):
@@ -319,14 +329,12 @@ class Map:
 		for tile in self.tileIterator():
 			if tile.isRiverStart():
 				river = RiverVertex(True)
-				tile.rivers.append(river)
 				river_tiles.append( (tile, river) )
 		self.makeRivers(river_tiles)
 
 
 	def generateLeftSide(self, gui):
 		new_boundary_tiles = []
-		river_tiles = []
 		uppermost_boundary_tile = self.boundary_tiles["left"][0]
 		iterator_state = uppermost_boundary_tile.iterator_state
 		
@@ -368,11 +376,9 @@ class Map:
 		self.boundary_tiles["up"].insert(0, new_boundary_tiles[0])
 		self.boundary_tiles["down"].insert(0, new_boundary_tiles[-1])
 
-		return river_tiles
 
 	def generateRightSide(self, gui):
 		new_boundary_tiles = []
-		river_tiles = []
 
 		uppermost_boundary_tile = self.boundary_tiles["right"][0]
 		iterator_state = uppermost_boundary_tile.iterator_state
@@ -415,12 +421,9 @@ class Map:
 		self.boundary_tiles["up"].append(new_boundary_tiles[0])
 		self.boundary_tiles["down"].append(new_boundary_tiles[-1])
 
-		return river_tiles
-
 
 	def generateUpSide(self, gui):
 		new_boundary_tiles = []
-		river_tiles = []
 		leftmost_boundary_tile = self.boundary_tiles["up"][0]
 		iterator_state = leftmost_boundary_tile.iterator_state
 		
@@ -469,10 +472,7 @@ class Map:
 		self.boundary_tiles["left"].insert(0, new_boundary_tiles[0])
 		self.boundary_tiles["right"].insert(0, new_boundary_tiles[-1])
 
-		return river_tiles
-
 	def generateDownSide(self, gui):
-		river_tiles = []
 		new_boundary_tiles = []
 		leftmost_boundary_tile = self.boundary_tiles["down"][0]
 		iterator_state = leftmost_boundary_tile.iterator_state
@@ -521,5 +521,3 @@ class Map:
 		self.boundary_tiles["down"] = new_boundary_tiles
 		self.boundary_tiles["left"].append(new_boundary_tiles[0])
 		self.boundary_tiles["right"].append(new_boundary_tiles[-1])
-
-		return river_tiles
