@@ -10,6 +10,32 @@ class Tile:
 	#length of tile side for plotting
 	side_length = 20
 
+	#coefficients used for calculating tile's coordinates based on neighbouring tile's coordinates
+	#if @tile_1 coordinates (x_1, y_1) are known and @tile_2 is located on @side of @tile_1, then
+	# x_2 = x_1 + tile_delta_xs[side] * side_length
+	# y_2 = y_1 + tile_delta_ys[side] * side_length 
+	delta_xs = {	"w": -2*0.866, 
+					"nw": -0.866, 
+					"ne": 0.866, 
+					"e": 2*0.866, 
+					"se": 0.866, 
+					"sw": -0.866}
+
+	delta_ys = {	"w": 0, 
+					"nw": -1.5, 
+					"ne": -1.5, 
+					"e": 0, 
+					"se": 1.5, 
+					"sw": 1.5}
+	
+	opposing_sides = {	"w": "e",
+						"nw": "se",
+						"ne": "sw",
+						"e": "w",
+						"se": "nw",
+						"sw": "ne"}
+
+
 	def __init__(self, iterator_state :bool = False):
 		'''
 		Constructor of Tile class.
@@ -77,6 +103,23 @@ class Tile:
 		return False
 
 
+	def setRelativeCoordinates(self, tile, side):
+		'''
+		Sets this tile's coordinates based on the @tile coordinates, which has this tile on it's @side side.
+		'''
+
+		self.x = tile.x + Tile.delta_xs[side] * Tile.side_length
+		self.y = tile.y + Tile.delta_ys[side] * Tile.side_length
+
+
+	def bindTile(self, tile, side):
+		'''
+		Connects @tile to this tile's @side (and vice versa). 
+		'''
+		
+		self.neighbours[side] = tile
+		opposing_side = Tile.opposing_sides[side]
+		tile.neighbours[opposing_side] = self
 
 
 class Map:
@@ -241,7 +284,7 @@ class Map:
 			index = len( self.boundary_tiles[key] ) // 2
 			tile = self.boundary_tiles[key][index]
 			while gui.isTileOnScreen(tile):
-				generate_functions[key](gui)
+				generate_functions[key]()
 				tile = self.boundary_tiles[key][index]
 		
 		#make the height map of the whole new map smoother
@@ -257,191 +300,196 @@ class Map:
 		self.makeRivers(tiles_rivers)
 
 
-	def generateLeftSide(self, gui):
+	def generateLeftSide(self):
+		'''
+		Generates one new tile layer on the map's left edge.
+		'''
+
 		new_boundary_tiles = []
+
+		#generating goes from top to bottom, the tiles are stored in self.boundary_tiles["left"] in this precise order
 		uppermost_boundary_tile = self.boundary_tiles["left"][0]
 		iterator_state = uppermost_boundary_tile.iterator_state
 		
+		#create the first tile of the new layer
 		new_uppermost_tile = Tile(iterator_state)
-		new_uppermost_tile.x = uppermost_boundary_tile.x - 2*0.866*uppermost_boundary_tile.side_length
-		new_uppermost_tile.y = uppermost_boundary_tile.y
+		new_uppermost_tile.setRelativeCoordinates(uppermost_boundary_tile, "w")
 
-		new_uppermost_tile.neighbours["e"] = uppermost_boundary_tile
-		uppermost_boundary_tile.neighbours["w"] = new_uppermost_tile
+		#the first tile of the new left layer has certainly east neighbour and potentially also south-east neighbour
+		uppermost_boundary_tile.bindTile(new_uppermost_tile, "w")
 
 		if uppermost_boundary_tile.neighbours["sw"] != None:
-			uppermost_boundary_tile.neighbours["sw"].neighbours["nw"] = new_uppermost_tile
-			new_uppermost_tile.neighbours["se"] = uppermost_boundary_tile.neighbours["sw"]
+			uppermost_boundary_tile.neighbours["sw"].bindTile(new_uppermost_tile, "nw")
 
 		new_boundary_tiles.append(new_uppermost_tile)
 
+		#create rest of the layer
 		for tile in self.boundary_tiles["left"][1:]:
 			new_tile = Tile(iterator_state)
-			new_tile.x = tile.x - 2*0.866*tile.side_length
-			new_tile.y = tile.y
+			new_tile.setRelativeCoordinates(tile, "w")
 
-			new_tile.neighbours["e"] = tile
-			tile.neighbours["w"] = new_tile
+			#these tiles have certainly east and north-east neighbours
+			#and potentially also north-west and south-east neighbours (in the time of their creation)
+			tile.bindTile(new_tile, "w")
+			tile.neighbours["nw"].bindTile(new_tile, "sw")
 			
-			tile.neighbours["nw"].neighbours["sw"] = new_tile
-			new_tile.neighbours["ne"] = tile.neighbours["nw"]
-
 			if tile.neighbours["nw"].neighbours["w"] != None:
-				tile.neighbours["nw"].neighbours["w"].neighbours["se"] = new_tile
-				new_tile.neighbours["nw"] = tile.neighbours["nw"].neighbours["w"]
+				tile.neighbours["nw"].neighbours["w"].bindTile(new_tile, "se")
 
 			if tile.neighbours["sw"] != None:
-				tile.neighbours["sw"].neighbours["nw"] = new_tile
-				new_tile.neighbours["se"] = tile.neighbours["sw"]
+				tile.neighbours["sw"].bindTile(new_tile, "nw")
 			
 			new_boundary_tiles.append(new_tile)
 		
+		#update map's boundary_tiles ("up" and "down" got new leftmost tile)
 		self.boundary_tiles["left"] = new_boundary_tiles
 		self.boundary_tiles["up"].insert(0, new_boundary_tiles[0])
 		self.boundary_tiles["down"].insert(0, new_boundary_tiles[-1])
 
 
-	def generateRightSide(self, gui):
+	def generateRightSide(self):
+		'''
+		Generates one new tile layer on the map's right edge.
+		'''
 		new_boundary_tiles = []
 
+		#generating goes from top to bottom, the tiles are stored in self.boundary_tiles["right"] in this precise order
 		uppermost_boundary_tile = self.boundary_tiles["right"][0]
 		iterator_state = uppermost_boundary_tile.iterator_state
 		
+		#create the first tile of the new layer
 		new_uppermost_tile = Tile(iterator_state)
-		new_uppermost_tile.x = uppermost_boundary_tile.x + 2*0.866*uppermost_boundary_tile.side_length
-		new_uppermost_tile.y = uppermost_boundary_tile.y
+		new_uppermost_tile.setRelativeCoordinates(uppermost_boundary_tile, "e")
 
-		new_uppermost_tile.neighbours["w"] = uppermost_boundary_tile
-		uppermost_boundary_tile.neighbours["e"] = new_uppermost_tile
+		#the first tile of the new left layer has certainly west neighbour and potentially also south-west neighbour
+		uppermost_boundary_tile.bindTile(new_uppermost_tile, "e")
 
 		if uppermost_boundary_tile.neighbours["se"] != None:
-			uppermost_boundary_tile.neighbours["se"].neighbours["ne"] = new_uppermost_tile
-			new_uppermost_tile.neighbours["nw"] = uppermost_boundary_tile.neighbours["se"]
+			uppermost_boundary_tile.neighbours["se"].bindTile(new_uppermost_tile, "ne")
 
 		new_boundary_tiles.append(new_uppermost_tile)
 
+		#create rest of the layer
 		for tile in self.boundary_tiles["right"][1:]:
 			new_tile = Tile(iterator_state)
-			new_tile.x = tile.x + 2*0.866*tile.side_length
-			new_tile.y = tile.y
+			new_tile.setRelativeCoordinates(tile, "e")
 
-			new_tile.neighbours["w"] = tile
-			tile.neighbours["e"] = new_tile
-			
-			tile.neighbours["ne"].neighbours["se"] = new_tile
-			new_tile.neighbours["nw"] = tile.neighbours["ne"]
+			#these tiles have certainly east and north-east neighbours
+			#and potentially also north-west and south-east neighbours (in the time of their creation)
+			tile.bindTile(new_tile, "e")
+			tile.neighbours["ne"].bindTile(new_tile, "se")
 
 			if tile.neighbours["ne"].neighbours["e"] != None:
-				tile.neighbours["ne"].neighbours["e"].neighbours["sw"] = new_tile
-				new_tile.neighbours["ne"] = tile.neighbours["ne"].neighbours["e"]
+				tile.neighbours["ne"].neighbours["e"].bindTile(new_tile, "sw")
 
 			if tile.neighbours["se"] != None:
-				tile.neighbours["se"].neighbours["ne"] = new_tile
-				new_tile.neighbours["sw"] = tile.neighbours["se"]
+				tile.neighbours["se"].bindTile(new_tile, "ne")
 
 			new_boundary_tiles.append(new_tile)
 		
+		#update map's boundary_tiles ("up" and "down" got new rightmost tile)
 		self.boundary_tiles["right"] = new_boundary_tiles
 		self.boundary_tiles["up"].append(new_boundary_tiles[0])
 		self.boundary_tiles["down"].append(new_boundary_tiles[-1])
 
 
-	def generateUpSide(self, gui):
+	def generateUpSide(self):
+		'''
+		Generates one new tile layer on the map's top edge.
+		'''
+
 		new_boundary_tiles = []
+
+		#generating goes from left to right, the tiles are stored in self.boundary_tiles["up"] in this precise order
 		leftmost_boundary_tile = self.boundary_tiles["up"][0]
 		iterator_state = leftmost_boundary_tile.iterator_state
 		
+		#create the first tile of the new layer in the north-west direction, if the current leftmost tile is not already exceeding
 		if leftmost_boundary_tile.neighbours["sw"] != None:	
 			new_leftmost_tile = Tile(iterator_state)
-			new_leftmost_tile.x = leftmost_boundary_tile.x - 0.866*leftmost_boundary_tile.side_length
-			new_leftmost_tile.y = leftmost_boundary_tile.y - 1.5*leftmost_boundary_tile.side_length
-
-			new_leftmost_tile.neighbours["se"] = leftmost_boundary_tile
-			leftmost_boundary_tile.neighbours["nw"] = new_leftmost_tile
+			new_leftmost_tile.setRelativeCoordinates(leftmost_boundary_tile, "nw")
+			leftmost_boundary_tile.bindTile(new_leftmost_tile, "nw")
 
 			new_boundary_tiles.append(new_leftmost_tile)
 
+		#create rest of the layer
 		for tile in self.boundary_tiles["up"][1:]:
 			new_tile = Tile(iterator_state)
-			new_tile.x = tile.x - 0.866*tile.side_length
-			new_tile.y = tile.y - 1.5*tile.side_length
+			new_tile.setRelativeCoordinates(tile, "nw")
 
-			new_tile.neighbours["se"] = tile
-			tile.neighbours["nw"] = new_tile
-
-			tile.neighbours["w"].neighbours["ne"] = new_tile
-			new_tile.neighbours["sw"] = tile.neighbours["w"]
+			#these tiles have certainly south-west and south-east neighbours
+			#and usually also west neighbour (in the time of their creation)
+			tile.bindTile(new_tile, "nw")
+			tile.neighbours["w"].bindTile(new_tile, "ne")
 
 			if tile.neighbours["w"].neighbours["nw"] != None:
-				new_tile.neighbours["w"] = tile.neighbours["w"].neighbours["nw"]
-				tile.neighbours["w"].neighbours["nw"].neighbours["e"] = new_tile
+				tile.neighbours["w"].neighbours["nw"].bindTile(new_tile, "e")
 
 			new_boundary_tiles.append(new_tile)
 		
+		#create the last tile which might have been omitted
 		rightmost_boundary_tile = self.boundary_tiles["up"][-1]
 		if rightmost_boundary_tile.neighbours["se"] != None:
 			new_rightmost_tile = Tile(iterator_state)
-			new_rightmost_tile.x = rightmost_boundary_tile.x + 0.866*rightmost_boundary_tile.side_length
-			new_rightmost_tile.y = rightmost_boundary_tile.y - 1.5*rightmost_boundary_tile.side_length
+			new_rightmost_tile.setRelativeCoordinates(rightmost_boundary_tile, "ne")
 
-			new_rightmost_tile.neighbours["sw"] = rightmost_boundary_tile
-			rightmost_boundary_tile.neighbours["ne"] = new_rightmost_tile
-
-			new_rightmost_tile.neighbours["w"] = rightmost_boundary_tile.neighbours["nw"]
-			rightmost_boundary_tile.neighbours["nw"].neighbours["e"] = new_rightmost_tile
+			rightmost_boundary_tile.bindTile(new_rightmost_tile, "ne")
+			rightmost_boundary_tile.neighbours["nw"].bindTile(new_rightmost_tile, "e")
 
 			new_boundary_tiles.append(new_rightmost_tile)
-		
+
+		#update map's boundary_tiles ("left" and "right" got new uppermost tile)
 		self.boundary_tiles["up"] = new_boundary_tiles
 		self.boundary_tiles["left"].insert(0, new_boundary_tiles[0])
 		self.boundary_tiles["right"].insert(0, new_boundary_tiles[-1])
 
-	def generateDownSide(self, gui):
+
+	def generateDownSide(self):
+		'''
+		Generates one new tile layer on the map's bottom edge.
+		'''
+
 		new_boundary_tiles = []
+
+		#generating goes from left to right, the tiles are stored in self.boundary_tiles["down"] in this precise order
 		leftmost_boundary_tile = self.boundary_tiles["down"][0]
 		iterator_state = leftmost_boundary_tile.iterator_state
 		
+		#create the first tile of the new layer in the south-west direction, if the current leftmost tile is not already exceeding
 		if leftmost_boundary_tile.neighbours["nw"] != None:	
 			new_leftmost_tile = Tile(iterator_state)
-			new_leftmost_tile.x = leftmost_boundary_tile.x - 0.866*leftmost_boundary_tile.side_length
-			new_leftmost_tile.y = leftmost_boundary_tile.y + 1.5*leftmost_boundary_tile.side_length
-
-			new_leftmost_tile.neighbours["ne"] = leftmost_boundary_tile
-			leftmost_boundary_tile.neighbours["sw"] = new_leftmost_tile
+			new_leftmost_tile.setRelativeCoordinates(leftmost_boundary_tile, "sw")
+			leftmost_boundary_tile.bindTile(new_leftmost_tile, "sw")
 
 			new_boundary_tiles.append(new_leftmost_tile)
 
+		#create rest of the layer
 		for tile in self.boundary_tiles["down"][1:]:
 			new_tile = Tile(iterator_state)
-			new_tile.x = tile.x - 0.866*tile.side_length
-			new_tile.y = tile.y + 1.5*tile.side_length
-
-			new_tile.neighbours["ne"] = tile
-			tile.neighbours["sw"] = new_tile
-
-			tile.neighbours["w"].neighbours["se"] = new_tile
-			new_tile.neighbours["nw"] = tile.neighbours["w"]
+			new_tile.setRelativeCoordinates(tile, "sw")
+			
+			#these tiles have certainly north-west and north-east neighbours
+			#and usually also west neighbour (in the time of their creation)
+			tile.bindTile(new_tile, "sw")
+			tile.neighbours["w"].bindTile(new_tile, "se")
 
 			if tile.neighbours["w"].neighbours["sw"] != None:
-				new_tile.neighbours["w"] = tile.neighbours["w"].neighbours["sw"]
-				tile.neighbours["w"].neighbours["sw"].neighbours["e"] = new_tile
+				tile.neighbours["w"].neighbours["sw"].bindTile(new_tile, "e")
 
 			new_boundary_tiles.append(new_tile)
-		
+
+		#create the last tile which might have been omitted
 		rightmost_boundary_tile = self.boundary_tiles["down"][-1]
 		if rightmost_boundary_tile.neighbours["ne"] != None:
 			new_rightmost_tile = Tile(iterator_state)
-			new_rightmost_tile.x = rightmost_boundary_tile.x + 0.866*rightmost_boundary_tile.side_length
-			new_rightmost_tile.y = rightmost_boundary_tile.y + 1.5*rightmost_boundary_tile.side_length
+			new_rightmost_tile.setRelativeCoordinates(rightmost_boundary_tile, "se")
 
-			new_rightmost_tile.neighbours["nw"] = rightmost_boundary_tile
-			rightmost_boundary_tile.neighbours["se"] = new_rightmost_tile
-
-			new_rightmost_tile.neighbours["w"] = rightmost_boundary_tile.neighbours["sw"]
-			rightmost_boundary_tile.neighbours["sw"].neighbours["e"] = new_rightmost_tile
+			rightmost_boundary_tile.bindTile(new_rightmost_tile, "se")
+			rightmost_boundary_tile.neighbours["sw"].bindTile(new_rightmost_tile, "e")
 
 			new_boundary_tiles.append(new_rightmost_tile)
-		
+
+		#update map's boundary_tiles ("left" and "right" got new bottommost tile)
 		self.boundary_tiles["down"] = new_boundary_tiles
 		self.boundary_tiles["left"].append(new_boundary_tiles[0])
 		self.boundary_tiles["right"].append(new_boundary_tiles[-1])

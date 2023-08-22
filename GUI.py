@@ -7,20 +7,6 @@ class WindowHandler:
 	Graphics interface class.
 	'''
 
-	tile_delta_xs = {	"w": -2*0.866, 
-						"nw": -0.866, 
-						"ne": 0.866, 
-						"e": 2*0.866, 
-						"se": 0.866, 
-						"sw": -0.866}
-				
-	tile_delta_ys = {	"w": 0, 
-						"nw": -1.5, 
-						"ne": -1.5, 
-						"e": 0, 
-						"se": 1.5, 
-						"sw": 1.5}
-
 	def __init__(self):
 		#initiate tkinter window and save its size
 		self.root = tkinter.Tk()
@@ -63,12 +49,12 @@ class WindowHandler:
 		@tile ... Tile object which is being plotted.
 		@background_colour ... Filling colour of the plotted tile represented by '#RRGGBB' hexadecimal string.
 		'''
-		points = [	tile.x, tile.y-tile.side_length,
-					tile.x+0.866*tile.side_length, tile.y-0.5*tile.side_length,
-					tile.x+0.866*tile.side_length, tile.y+0.5*tile.side_length,
-					tile.x, tile.y+tile.side_length,
-					tile.x-0.866*tile.side_length, tile.y+0.5*tile.side_length,
-					tile.x-0.866*tile.side_length, tile.y-0.5*tile.side_length]		
+		points = [	tile.x, tile.y - Tile.side_length,
+					tile.x + 0.866*Tile.side_length, tile.y - 0.5*Tile.side_length,
+					tile.x + 0.866*Tile.side_length, tile.y + 0.5*Tile.side_length,
+					tile.x, tile.y + Tile.side_length,
+					tile.x - 0.866*Tile.side_length, tile.y + 0.5*Tile.side_length,
+					tile.x - 0.866*Tile.side_length, tile.y - 0.5*Tile.side_length]		
 		tile.gui_id = self.canvas.create_polygon(points, outline='black', fill=background_colour, width=2)
 		tile.was_plotted = True
 
@@ -101,7 +87,7 @@ class WindowHandler:
 		Returns True if the @tile's coordinates are inside the visible canvas area.
 		@tile ... Tile object which coordinates are being considered.
 		'''
-		offset_delta = tile.side_length
+		offset_delta = Tile.side_length
 		return (-offset_delta < tile.x < self.canv_width+offset_delta and -offset_delta < tile.y < self.canv_height+offset_delta)
 
 	def moveTiles(self, mapObject :Map, dx :float, dy :float):
@@ -137,8 +123,8 @@ class WindowHandler:
 				for key in tile.neighbours:
 					neighbour = tile.neighbours[key]
 					if neighbour != None and not neighbour.gui_active:
-						neighbour.x = tile.x + self.tile_delta_xs[key]*tile.side_length
-						neighbour.y = tile.y + self.tile_delta_ys[key]*tile.side_length
+						neighbour.setRelativeCoordinates(tile, key)
+
 						#if the neighbours' new coordinates are on the screen, render that tile
 						if self.isTileOnScreen(neighbour):
 							to_activate.add(neighbour)
@@ -173,19 +159,19 @@ class WindowHandler:
 
 		if need_new_layer["up"]:
 			for _ in range(chunk_size):
-				mapObject.generateUpSide(self)
+				mapObject.generateUpSide()
 				new_tiles += mapObject.boundary_tiles["up"]
 		if need_new_layer["left"]:
 			for _ in range(chunk_size):
-				mapObject.generateLeftSide(self)
+				mapObject.generateLeftSide()
 				new_tiles += mapObject.boundary_tiles["left"]
 		if need_new_layer["right"]:
 			for _ in range(chunk_size):
-				mapObject.generateRightSide(self)
+				mapObject.generateRightSide()
 				new_tiles += mapObject.boundary_tiles["right"]
 		if need_new_layer["down"]:
 			for _ in range(chunk_size):
-				mapObject.generateDownSide(self)
+				mapObject.generateDownSide()
 				new_tiles += mapObject.boundary_tiles["down"]
 		
 		#make the terrain smoother	
