@@ -1,6 +1,6 @@
 import tkinter
-from map import Map, Tile, RiverSegment, RiverVertex
-import numpy
+from mapPkg import Tile, Map, RiverSegment, RiverVertex
+from mapPkg import numpy
 
 class WindowHandler:
 	'''
@@ -104,7 +104,7 @@ class WindowHandler:
 		offset_delta = tile.side_length
 		return (-offset_delta < tile.x < self.canv_width+offset_delta and -offset_delta < tile.y < self.canv_height+offset_delta)
 
-	def moveTiles(self, mapObject :Map, dx :float, dy :float) -> dict[list[Tile]]:
+	def moveTiles(self, mapObject :Map, dx :float, dy :float):
 		'''
 		Moves the plotted tiles in the specified direction. Returns lists of tiles, which are located on the map boundaries, organised in a dictionary.
 		@mapObject ... Map object which contains the tiles that are being moved.
