@@ -153,26 +153,26 @@ class WindowHandler:
 		river_tiles = []
 		
 		for key in ["left", "right", "up", "down"]:
-			for tile in mapObject.boundary_tiles[key]:
+			for tile in mapObject.boundary_tiles[key].iterator():
 				for river in tile.rivers:
 					if river.end_side == None:	river_tiles.append( (tile, river) )
 
 		if need_new_layer["up"]:
 			for _ in range(chunk_size):
 				mapObject.generateUpSide()
-				new_tiles += mapObject.boundary_tiles["up"]
+				new_tiles += [ tile for tile in mapObject.boundary_tiles["up"].iterator() ]
 		if need_new_layer["left"]:
 			for _ in range(chunk_size):
 				mapObject.generateLeftSide()
-				new_tiles += mapObject.boundary_tiles["left"]
+				new_tiles += [ tile for tile in mapObject.boundary_tiles["left"].iterator() ]
 		if need_new_layer["right"]:
 			for _ in range(chunk_size):
 				mapObject.generateRightSide()
-				new_tiles += mapObject.boundary_tiles["right"]
+				new_tiles += [ tile for tile in mapObject.boundary_tiles["right"].iterator() ]
 		if need_new_layer["down"]:
 			for _ in range(chunk_size):
 				mapObject.generateDownSide()
-				new_tiles += mapObject.boundary_tiles["down"]
+				new_tiles += [ tile for tile in mapObject.boundary_tiles["down"].iterator() ]
 		
 		#make the terrain smoother	
 		mapObject.updateSandpiles(new_tiles)

@@ -2,6 +2,142 @@ from riverPkg import RiverSegment, RiverVertex
 import numpy
 
 
+class Node:
+	'''
+	Class representing node of LinkedList class. 
+	'''
+
+	def __init__(self, value = None):
+		'''
+		Constructor of Node class.
+		@value ... Value to be stored in this node.
+		'''
+
+		self.value = value
+		self.previous = None
+		self.next = None
+
+
+
+class LinkedList:
+	'''
+	Class representing two-directional linked list with start, middle and end pointer.
+	'''
+
+	def __init__(self, values :list):
+		'''
+		Constructor of LinkedList class.
+		@value (list) ... Values to be stored in this object. 
+		'''
+
+		self.start = None
+		self.middle = None
+		self.end = None
+
+		#each append adds +1, each prepend adds -1
+		#value +2 or -2 means that the middle tile has to be accordingly shifted
+		self.middle_counter = 0
+
+		for val in values:
+			self.append(val)
+
+	def balance(self):
+		'''
+		Checks self.middle_counter and accordingly changes self.middle.
+		'''
+
+		if self.middle_counter == 2:
+			self.middle_counter = 0
+			self.middle = self.middle.next
+
+		elif self.middle_counter == -2:
+			self.middle_counter = 0
+			self.middle = self.middle.previous
+
+
+	def append(self, value):
+		'''
+		Adds @value to the end of this linked list.
+		'''
+
+		#empty list
+		if self.end == None:
+			node = Node(value)
+			self.start = node
+			self.end = node
+			self.middle = node
+		else:
+			node = Node(value)
+			self.end.next = node
+			node.previous = self.end
+			self.end = self.end.next
+			self.middle_counter += 1
+			self.balance()
+
+
+	def prepend(self, value):
+		'''
+		Adds @value to the start of this linked list.
+		'''
+
+		#empty list
+		if self.start == None:
+			node = Node(value)
+			self.start = node
+			self.end = node
+			self.middle = node
+		else:
+			node = Node(value)
+			node.next = self.start
+			self.start.previous = node
+			self.start = node
+			self.middle_counter -= 1
+			self.balance()
+	
+
+	def popleft(self):
+		'''
+		Removes start value end returns it.
+		'''
+
+		if self.start == None:
+			return None
+		
+		node = self.start
+		self.start = node.next
+		self.middle_counter += 1
+		self.balance()
+
+		return node.value
+
+
+	def popright(self):
+		'''
+		Removes end value end returns it.
+		'''
+		
+		if self.end == None:
+			return None
+
+		node = self.end
+		self.end = node.previous
+		self.middle_counter -= 1
+		self.balance()
+
+		return node.value
+
+
+	def iterator(self):
+		'''
+		Iterator over this list.
+		'''
+
+		pointer = self.start
+		while pointer != None:
+			yield pointer.value
+			pointer = pointer.next
+
+
 class Tile:
 	'''
 	Class representing map tiles.
@@ -140,7 +276,11 @@ class Map:
 		self.centre_tile.y = centre_y
 
 		#the tiles on the map edges
-		self.boundary_tiles = {"left": [self.centre_tile], "up": [self.centre_tile], "right": [self.centre_tile], "down": [self.centre_tile]}
+		self.boundary_tiles = {	"left": LinkedList( [self.centre_tile] ), 
+								"up": LinkedList( [self.centre_tile] ), 
+								"right": LinkedList( [self.centre_tile] ), 
+								"down": LinkedList( [self.centre_tile]) 
+							}
 
 
 	def tileIterator(self, active_only = False):
@@ -281,11 +421,10 @@ class Map:
 		for key in ["left", "up", "right", "down"]:
 
 			#the tile in the middle of the edge is most representative in evaluating whether the map needs to be extended on that side
-			index = len( self.boundary_tiles[key] ) // 2
-			tile = self.boundary_tiles[key][index]
+			tile = self.boundary_tiles[key].middle.value
 			while gui.isTileOnScreen(tile):
 				generate_functions[key]()
-				tile = self.boundary_tiles[key][index]
+				tile = self.boundary_tiles[key].middle.value
 		
 		#make the height map of the whole new map smoother
 		self.updateSandpiles( list(self.tileIterator()) )
@@ -305,10 +444,10 @@ class Map:
 		Generates one new tile layer on the map's left edge.
 		'''
 
-		new_boundary_tiles = []
+		new_boundary_tiles = LinkedList([])
 
 		#generating goes from top to bottom, the tiles are stored in self.boundary_tiles["left"] in this precise order
-		uppermost_boundary_tile = self.boundary_tiles["left"][0]
+		uppermost_boundary_tile = self.boundary_tiles["left"].popleft()
 		iterator_state = uppermost_boundary_tile.iterator_state
 		
 		#create the first tile of the new layer
@@ -324,7 +463,7 @@ class Map:
 		new_boundary_tiles.append(new_uppermost_tile)
 
 		#create rest of the layer
-		for tile in self.boundary_tiles["left"][1:]:
+		for tile in self.boundary_tiles["left"].iterator():
 			new_tile = Tile(iterator_state)
 			new_tile.setRelativeCoordinates(tile, "w")
 
@@ -343,18 +482,18 @@ class Map:
 		
 		#update map's boundary_tiles ("up" and "down" got new leftmost tile)
 		self.boundary_tiles["left"] = new_boundary_tiles
-		self.boundary_tiles["up"].insert(0, new_boundary_tiles[0])
-		self.boundary_tiles["down"].insert(0, new_boundary_tiles[-1])
+		self.boundary_tiles["up"].prepend( new_boundary_tiles.start.value )
+		self.boundary_tiles["down"].prepend( new_boundary_tiles.end.value )
 
 
 	def generateRightSide(self):
 		'''
 		Generates one new tile layer on the map's right edge.
 		'''
-		new_boundary_tiles = []
+		new_boundary_tiles = LinkedList([])
 
 		#generating goes from top to bottom, the tiles are stored in self.boundary_tiles["right"] in this precise order
-		uppermost_boundary_tile = self.boundary_tiles["right"][0]
+		uppermost_boundary_tile = self.boundary_tiles["right"].popleft()
 		iterator_state = uppermost_boundary_tile.iterator_state
 		
 		#create the first tile of the new layer
@@ -370,7 +509,7 @@ class Map:
 		new_boundary_tiles.append(new_uppermost_tile)
 
 		#create rest of the layer
-		for tile in self.boundary_tiles["right"][1:]:
+		for tile in self.boundary_tiles["right"].iterator():
 			new_tile = Tile(iterator_state)
 			new_tile.setRelativeCoordinates(tile, "e")
 
@@ -389,8 +528,8 @@ class Map:
 		
 		#update map's boundary_tiles ("up" and "down" got new rightmost tile)
 		self.boundary_tiles["right"] = new_boundary_tiles
-		self.boundary_tiles["up"].append(new_boundary_tiles[0])
-		self.boundary_tiles["down"].append(new_boundary_tiles[-1])
+		self.boundary_tiles["up"].append( new_boundary_tiles.start.value )
+		self.boundary_tiles["down"].append( new_boundary_tiles.end.value )
 
 
 	def generateUpSide(self):
@@ -398,10 +537,10 @@ class Map:
 		Generates one new tile layer on the map's top edge.
 		'''
 
-		new_boundary_tiles = []
+		new_boundary_tiles = LinkedList([])
 
 		#generating goes from left to right, the tiles are stored in self.boundary_tiles["up"] in this precise order
-		leftmost_boundary_tile = self.boundary_tiles["up"][0]
+		leftmost_boundary_tile = self.boundary_tiles["up"].popleft()
 		iterator_state = leftmost_boundary_tile.iterator_state
 		
 		#create the first tile of the new layer in the north-west direction, if the current leftmost tile is not already exceeding
@@ -413,7 +552,7 @@ class Map:
 			new_boundary_tiles.append(new_leftmost_tile)
 
 		#create rest of the layer
-		for tile in self.boundary_tiles["up"][1:]:
+		for tile in self.boundary_tiles["up"].iterator():
 			new_tile = Tile(iterator_state)
 			new_tile.setRelativeCoordinates(tile, "nw")
 
@@ -428,7 +567,7 @@ class Map:
 			new_boundary_tiles.append(new_tile)
 		
 		#create the last tile which might have been omitted
-		rightmost_boundary_tile = self.boundary_tiles["up"][-1]
+		rightmost_boundary_tile = self.boundary_tiles["up"].end.value
 		if rightmost_boundary_tile.neighbours["se"] != None:
 			new_rightmost_tile = Tile(iterator_state)
 			new_rightmost_tile.setRelativeCoordinates(rightmost_boundary_tile, "ne")
@@ -440,8 +579,8 @@ class Map:
 
 		#update map's boundary_tiles ("left" and "right" got new uppermost tile)
 		self.boundary_tiles["up"] = new_boundary_tiles
-		self.boundary_tiles["left"].insert(0, new_boundary_tiles[0])
-		self.boundary_tiles["right"].insert(0, new_boundary_tiles[-1])
+		self.boundary_tiles["left"].prepend( new_boundary_tiles.start.value )
+		self.boundary_tiles["right"].prepend( new_boundary_tiles.end.value )
 
 
 	def generateDownSide(self):
@@ -449,10 +588,10 @@ class Map:
 		Generates one new tile layer on the map's bottom edge.
 		'''
 
-		new_boundary_tiles = []
+		new_boundary_tiles = LinkedList([])
 
 		#generating goes from left to right, the tiles are stored in self.boundary_tiles["down"] in this precise order
-		leftmost_boundary_tile = self.boundary_tiles["down"][0]
+		leftmost_boundary_tile = self.boundary_tiles["down"].popleft()
 		iterator_state = leftmost_boundary_tile.iterator_state
 		
 		#create the first tile of the new layer in the south-west direction, if the current leftmost tile is not already exceeding
@@ -464,7 +603,7 @@ class Map:
 			new_boundary_tiles.append(new_leftmost_tile)
 
 		#create rest of the layer
-		for tile in self.boundary_tiles["down"][1:]:
+		for tile in self.boundary_tiles["down"].iterator():
 			new_tile = Tile(iterator_state)
 			new_tile.setRelativeCoordinates(tile, "sw")
 			
@@ -479,7 +618,7 @@ class Map:
 			new_boundary_tiles.append(new_tile)
 
 		#create the last tile which might have been omitted
-		rightmost_boundary_tile = self.boundary_tiles["down"][-1]
+		rightmost_boundary_tile = self.boundary_tiles["down"].end.value
 		if rightmost_boundary_tile.neighbours["ne"] != None:
 			new_rightmost_tile = Tile(iterator_state)
 			new_rightmost_tile.setRelativeCoordinates(rightmost_boundary_tile, "se")
@@ -491,5 +630,5 @@ class Map:
 
 		#update map's boundary_tiles ("left" and "right" got new bottommost tile)
 		self.boundary_tiles["down"] = new_boundary_tiles
-		self.boundary_tiles["left"].append(new_boundary_tiles[0])
-		self.boundary_tiles["right"].append(new_boundary_tiles[-1])
+		self.boundary_tiles["left"].append(new_boundary_tiles.start.value)
+		self.boundary_tiles["right"].append(new_boundary_tiles.end.value)
