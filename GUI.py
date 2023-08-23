@@ -8,11 +8,21 @@ class WindowHandler:
 	'''
 
 	def __init__(self):
-		#initiate tkinter window and save its size
+		'''
+		Constructor of WindowHandler class.
+		'''
+
+		#initiate tkinter window and save screen size
 		self.root = tkinter.Tk()
+		self.root.title("Hex Map Generator")
 		self.screen_width = self.root.winfo_screenwidth()
 		self.screen_height = self.root.winfo_screenheight()
-		self.move_speed = 8
+		
+		#set the number of pixels in which the map moves on one keypress
+		self.move_speed = 10
+
+		#how many layers are added simultaneously
+		self.chunk_size = 10
 
 		#create tkinter canvas inside the window
 		self.canv_width = self.screen_width // 1.5
@@ -21,14 +31,14 @@ class WindowHandler:
 		self.canvas.pack()
 		
 		#create new map (only the structure - create and connect those tiles that will be visible into graph) 
-		mapObj = Map(self.screen_width//4, self.screen_height//4)
+		mapObj = Map(self.canv_width//2, self.canv_height//2)
 		mapObj.generateGraph(self)
 
 		#plot all the newly created tiles
 		for tile in mapObj.tileIterator():
 			tile.gui_active = True
-			#self.plotTile(tile, self.getColourOfTile(tile))
 			self.plotTile(tile, self.getColourOfTile(tile))
+
 			for river in tile.rivers:
 				self.plotRiver(river)
 
@@ -38,14 +48,13 @@ class WindowHandler:
 		self.root.bind("<KeyPress-s>", lambda event, gui=self: gui.moveMap(mapObj, 0, -self.move_speed))
 		self.root.bind("<KeyPress-d>", lambda event, gui=self: gui.moveMap(mapObj, -self.move_speed, 0))
 
-		#mapObj.plotAllBounds(self)
-
 		#complete the tkinter window creation
 		tkinter.mainloop()
 
+
 	def plotTile(self, tile :Tile, background_colour :str):
 		'''
-		Plot hexagon tile to the WindowHandler's canvas.
+		Plot hexagon tile on the canvas.
 		@tile ... Tile object which is being plotted.
 		@background_colour ... Filling colour of the plotted tile represented by '#RRGGBB' hexadecimal string.
 		'''
@@ -58,41 +67,79 @@ class WindowHandler:
 		tile.gui_id = self.canvas.create_polygon(points, outline='black', fill=background_colour, width=2)
 		tile.was_plotted = True
 
+
 	def plotRiver(self, river):
-		#self.canvas.create_line(river.start_point, river.mid_point, width=3, fill="#FFFFFF")
-		#self.canvas.create_line(river.mid_point, river.end_point, width=3, fill="#FFFFFF")
+		'''
+		Plot @river (RiverVertex || RiverSegment) from it's coordinates.
+		'''
+
+		#RiverVertex is plotted differently than RiverSegment
 		if isinstance(river, RiverVertex):
 			x, y = river.start_point
-			river.gui_id = [self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#0022BB")] 
+			river.gui_ids = [self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#0022BB")]
+
+			#small circle indicating river source
 			if river.is_start:
-				river.gui_id.append( self.canvas.create_oval(x-2, y-2, x+2, y+2, fill="#0022BB") )
-			#river.gui_id = [self.canvas.create_line(river.start_point, river.end_point, width=3, fill="#0000FF")]
+				river.gui_ids.append( self.canvas.create_oval(x-2, y-2, x+2, y+2, fill="#0022BB") )
 		else:
-			river.gui_id = [self.canvas.create_line(river.start_point, river.mid_point, width=3, fill="#0022BB"), 
+			river.gui_ids = [self.canvas.create_line(river.start_point, river.mid_point, width=3, fill="#0022BB"), 
 							self.canvas.create_line(river.mid_point, river.end_point, width=3, fill="#0022BB")]
-	
+
+
 	def hideRiver(self, river):
-		for id in river.gui_id:
+		'''
+		Remove @river's (RiverVertex || RiverSegment) plot from the canvas.
+		'''
+
+		for id in river.gui_ids:
 			self.canvas.delete(id)
+
 
 	def hideTile(self, tile :Tile):
 		'''
-		Destroy @tile's hexagon plot from the tkinter canvas.
-		@tile ... Tile object which is being removed from the canvas.
+		Remove @tile's (Tile) hexagon plot from the canvas.
 		'''
+
 		self.canvas.delete(tile.gui_id)
-	
-	def isTileOnScreen(self, tile :Tile) -> bool:
+
+
+	def hideTiles(self, tiles :list[Tile]):
 		'''
-		Returns True if the @tile's coordinates are inside the visible canvas area.
-		@tile ... Tile object which coordinates are being considered.
+		Remove tiles and their rivers specified in @tiles (list[Tile]) from the canvas.
 		'''
+
+		for tile in tiles:
+			tile.gui_active = False
+			self.hideTile(tile)
+			for river in tile.rivers:
+				self.hideRiver(river)
+
+
+	def plotTiles(self, tiles :list[Tile]):
+		'''
+		Plot tiles and their rivers specified in @tiles (list[Tile]) on the canvas. 
+		'''
+
+		for tile in tiles:
+				tile.gui_active = True
+				self.plotTile(tile, self.getColourOfTile(tile))
+				for river in tile.rivers:
+					river.setCoords(tile)
+					self.plotRiver(river)
+
+
+	def isTileOnScreen(self, tile :Tile):
+		'''
+		Returns True if the @tile's (Tile) coordinates are inside the visible canvas area.
+		'''
+
 		offset_delta = Tile.side_length
 		return (-offset_delta < tile.x < self.canv_width+offset_delta and -offset_delta < tile.y < self.canv_height+offset_delta)
 
-	def moveTiles(self, mapObject :Map, dx :float, dy :float):
+
+	def moveMap(self, mapObject :Map, dx :float, dy :float):
 		'''
-		Moves the plotted tiles in the specified direction. Returns lists of tiles, which are located on the map boundaries, organised in a dictionary.
+		Moves the plotted tiles in the specified direction.
 		@mapObject ... Map object which contains the tiles that are being moved.
 		@dx ... The x coordinate of the moving direction vector.
 		@dy ... The y coordinate of the moving direction vector.
@@ -102,20 +149,23 @@ class WindowHandler:
 		to_deactivate = set()
 		need_new_layer = {"up": False, "down": False, "left": False, "right": False}
 
-		#go through every tile on the map, which is currently visible on-screen
+		#go through every tile which is currently visible on-screen
 		for tile in mapObject.tileIterator(active_only=True):
+			
 			#move the tile's coordinates
 			tile.x += dx
 			tile.y += dy
 			self.canvas.move(tile.gui_id, dx, dy)
+			
+			#move the tile's rivers
 			for river in tile.rivers:
-				for id in river.gui_id:
+				for id in river.gui_ids:
 					self.canvas.move(id, dx, dy)
-					#pass
 
-			#the tile moved off the screen
+			#if the tile moved off the screen, deactivate it
 			if not self.isTileOnScreen(tile):
 				to_deactivate.add(tile)
+			
 			#the tile is on the screen
 			else:
 
@@ -133,82 +183,27 @@ class WindowHandler:
 			#check, whether a visible tile is also on the map boundary
 			if tile.neighbours["w"] == None:
 				need_new_layer["left"] = True
+
 			if tile.neighbours["nw"] == None:
 				need_new_layer["up"] = True
+
 			if tile.neighbours["e"] == None:
 				need_new_layer["right"] = True
+
 			if tile.neighbours["sw"] == None:
 				need_new_layer["down"] = True
 
 		#unrender tiles that are newly off the screen
-		for tile in to_deactivate:
-			#if tile.gui_active:
-			tile.gui_active = False
-			self.hideTile(tile)
-			for river in tile.rivers:
-				self.hideRiver(river)
-
-		chunk_size = 5
-		new_tiles = []
-		river_tiles = []
+		self.hideTiles(to_deactivate)
 		
-		for key in ["left", "right", "up", "down"]:
-			for tile in mapObject.boundary_tiles[key].iterator():
-				for river in tile.rivers:
-					if river.end_side == None:	river_tiles.append( (tile, river) )
-
-		if need_new_layer["up"]:
-			for _ in range(chunk_size):
-				mapObject.generateUpSide()
-				new_tiles += [ tile for tile in mapObject.boundary_tiles["up"].iterator() ]
-		if need_new_layer["left"]:
-			for _ in range(chunk_size):
-				mapObject.generateLeftSide()
-				new_tiles += [ tile for tile in mapObject.boundary_tiles["left"].iterator() ]
-		if need_new_layer["right"]:
-			for _ in range(chunk_size):
-				mapObject.generateRightSide()
-				new_tiles += [ tile for tile in mapObject.boundary_tiles["right"].iterator() ]
-		if need_new_layer["down"]:
-			for _ in range(chunk_size):
-				mapObject.generateDownSide()
-				new_tiles += [ tile for tile in mapObject.boundary_tiles["down"].iterator() ]
-		
-		#make the terrain smoother	
-		mapObject.updateSandpiles(new_tiles)
-		for tile in new_tiles:
-			if tile.isRiverStart():
-				river = RiverVertex(is_start=True)
-				river_tiles.append( (tile, river) )
-		mapObject.makeRivers(river_tiles)
+		#generate new necessary layers
+		mapObject.generateNewLayers(need_new_layer, self.chunk_size)
 
 		#render tiles that are newly visible
-		for tile in to_activate:
-			#if not tile.gui_active:
-				tile.gui_active = True
-				self.plotTile(tile, self.getColourOfTile(tile))
-				for river in tile.rivers:
-					river.setCoords(tile)
-					self.plotRiver(river)
-
-
-
-	def moveMap(self, mapObject :Map, dx :float, dy :float):
-		'''
-		Moves the plotted tiles in the specified direction and dynamically creates new tiles, if needed.
-		@mapObject ... Map object which contains the tiles that are being moved.
-		@dx ... The x coordinate of the moving direction vector.
-		@dy ... The y coordinate of the moving direction vector.
-		'''
-		#move the map tiles
-		self.moveTiles(mapObject, dx, dy)
+		self.plotTiles(to_activate)
 
 		#possibly update mapObject.centre_tile after movement
 		mapObject.updateCentreTile(self.canv_width / 2, self.canv_height / 2)
-
-		#for tile in mapObject.tileIterator():
-		#	print(tile.altitude, tile.temperature)
-
 
 
 	def getColourOfTile(self, tile :Tile) -> str:
@@ -218,9 +213,7 @@ class WindowHandler:
 		'''
 
 		mapping = ['7','5','3','1']
-		brightness = int( numpy.floor(100*tile.altitude) )
-		first_digit = brightness // 10
-		second_digit = brightness % 10
+		brightness = int( numpy.floor(10*tile.altitude) )
 
 		#ocean
 		if tile.altitude < 0:
@@ -233,4 +226,4 @@ class WindowHandler:
 		elif tile.altitude > 0.3:
 			return "#444444"
 		else:
-			return "#00" + mapping[first_digit] + "000"
+			return "#00" + mapping[brightness] + "000"

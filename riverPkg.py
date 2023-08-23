@@ -11,7 +11,7 @@ class RiverVertex:
 
 		self.is_start = is_start
 		self.end_side = None
-		self.gui_id = None
+		self.gui_ids = None
 		self.start_point = None
 		self.end_point = None
 
@@ -51,7 +51,7 @@ class RiverSegment:
 
 		self.start_side = None
 		self.end_side = None
-		self.gui_id = None
+		self.gui_ids = None
 		self.start_point = None
 		self.end_point = None
 

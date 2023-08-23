@@ -9,7 +9,7 @@ class Tile:
 	'''
 	
 	#length of tile side for plotting
-	side_length = 20
+	side_length = 25
 
 	#coefficients used for calculating tile's coordinates based on neighbouring tile's coordinates
 	#if @tile_1 coordinates (x_1, y_1) are known and @tile_2 is located on @side of @tile_1, then
@@ -230,7 +230,8 @@ class Map:
 		while river_stack != []:
 			river_tile, river = river_stack.pop()
 
-			#find the current river_tile's sides in which the altitude decreases (rivers usually flow downstream ;-;)
+			#find the current river_tile's sides in which the altitude decreases (rivers usually flow downstream) 
+			#and which were not plotted yet (for consistency, if the tile was already plotted without a river)
 			possible_directions = [key for key in river_tile.neighbours	if river_tile.neighbours[key] != None
 														and not river_tile.neighbours[key].was_plotted
 														and river_tile.altitude >= river_tile.neighbours[key].altitude]
@@ -302,6 +303,38 @@ class Map:
 		
 		#generate the rest of rivers from the new sources
 		self.makeRivers(tiles_rivers)
+
+
+	def generateNewLayers(self, which_sides: dict[str, bool], chunk_size :int):
+		'''
+		Generates new tile layers specified by @which_sides (dict[str, bool]).
+		@chunk_size (int) ... Number of layers generated on one side.
+		'''
+
+		river_tiles = []
+		new_tiles = []
+		generating_functions = {	"up": self.generateUpSide,
+									"left": self.generateLeftSide,
+									"right": self.generateRightSide,
+									"down": self.generateDownSide
+		}
+
+		#generate necessary layers
+		for key in ["left", "up", "right", "down"]:
+			if which_sides[key]:
+				for _ in range(chunk_size):
+					generating_functions[key]()
+					new_tiles += [ tile for tile in self.boundary_tiles[key].iterator() ]
+		
+		#make the terrain smoother
+		self.updateSandpiles(new_tiles)
+
+		#plot rivers
+		for tile in new_tiles:
+			if tile.isRiverStart():
+				river = RiverVertex(is_start=True)
+				river_tiles.append( (tile, river) )
+		self.makeRivers(river_tiles)
 
 
 	def generateLeftSide(self):
