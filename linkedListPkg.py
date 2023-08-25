@@ -30,7 +30,7 @@ class LinkedList:
 		self.middle = None
 		self.end = None
 
-		#each append adds +1, each prepend adds -1
+		#each append and popleft adds +1, each prepend adn popright adds -1
 		#value +2 or -2 means that the middle tile has to be accordingly shifted
 		self.middle_counter = 0
 
@@ -94,7 +94,7 @@ class LinkedList:
 
 	def popleft(self):
 		'''
-		Removes start value end returns it.
+		Removes start value and returns it.
 		'''
 
 		if self.start == None:
@@ -110,7 +110,7 @@ class LinkedList:
 
 	def popright(self):
 		'''
-		Removes end value end returns it.
+		Removes end value and returns it.
 		'''
 		
 		if self.end == None:

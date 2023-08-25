@@ -161,14 +161,12 @@ class Map:
 
 		#initialise DFS
 		stack = []
-		def conditionFunc(tile):	return (not active_only) or tile.gui_active
 		stack.append(self.centre_tile)
 		self.centre_tile.iterator_state = new_state
 
 		#DFS
 		while stack != []:
 			tile = stack.pop()
-			not_visited_tiles = []
 
 			#look at the current tile's neighbours and add to stack those that exist, were not visited yet and (optionally) are currently plotted
 			for key in ["w", "nw", "ne", "e", "se", "sw"]:
@@ -217,15 +215,13 @@ class Map:
 				rand_shift = tile.altitude + beta*numpy.random.uniform(-1,1)
 
 				#apply the random update only if the altitude is still bounded in [-1, 1]
-				if -1 < rand_shift < 1:	tile.altitude = rand_shift
+				if -1 <= rand_shift <= 1:	tile.altitude = rand_shift
 
 
 	def makeRivers(self, river_stack :list):
 		'''
 		Creates whole rivers from the @river_stack (list[ (Tile, RiverVertex || RiverSegment) ]) incomplete rivers and the tiles in which the rivers are contained. 
 		'''
-		
-		opposing_sides = {"w": "e", "nw": "se", "ne": "sw", "e": "w", "se": "nw", "sw": "ne"}
 		
 		while river_stack != []:
 			river_tile, river = river_stack.pop()
@@ -251,7 +247,6 @@ class Map:
 				river.end_side = direction
 				river.setCoords(river_tile)
 
-
 				#if there is no ocean in the direction, create new river part
 				new_river_tile = river_tile.neighbours[direction]
 				if new_river_tile.altitude >= 0:
@@ -260,12 +255,12 @@ class Map:
 					if new_river_tile.rivers != []:
 						new_river = RiverVertex(False)
 						new_river_tile.rivers.append(new_river)
-						new_river.end_side = opposing_sides[direction]
+						new_river.end_side = Tile.opposing_sides[direction]
 						new_river.setCoords(new_river_tile)
-					#there is no river in the new_river_tile, so continue with the current'river's creation by adding new RiverSegment to the river_stack
+					#there is no river in the new_river_tile, so continue with the current river's creation by adding new RiverSegment to the river_stack
 					else:
 						new_river = RiverSegment()
-						new_river.start_side = opposing_sides[direction]
+						new_river.start_side = Tile.opposing_sides[direction]
 						river_stack.append( (new_river_tile, new_river) )
 
 
