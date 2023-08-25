@@ -37,6 +37,7 @@ class LinkedList:
 		for val in values:
 			self.append(val)
 
+
 	def balance(self):
 		'''
 		Checks self.middle_counter and accordingly changes self.middle.

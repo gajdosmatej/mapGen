@@ -37,7 +37,8 @@ class WindowHandler:
 		#plot all the newly created tiles
 		for tile in mapObj.tileIterator():
 			tile.gui_active = True
-			self.plotTile(tile, self.getColourOfTile(tile))
+			self.setColourOfTile(tile)
+			self.plotTile(tile)
 
 			for river in tile.rivers:
 				self.plotRiver(river)
@@ -52,11 +53,10 @@ class WindowHandler:
 		tkinter.mainloop()
 
 
-	def plotTile(self, tile :Tile, background_colour :str):
+	def plotTile(self, tile :Tile):
 		'''
 		Plot hexagon tile on the canvas.
-		@tile ... Tile object which is being plotted.
-		@background_colour ... Filling colour of the plotted tile represented by '#RRGGBB' hexadecimal string.
+		@tile (Tile) ... Tile which is being plotted.
 		'''
 		points = [	tile.x, tile.y - Tile.side_length,
 					tile.x + 0.866*Tile.side_length, tile.y - 0.5*Tile.side_length,
@@ -64,7 +64,7 @@ class WindowHandler:
 					tile.x, tile.y + Tile.side_length,
 					tile.x - 0.866*Tile.side_length, tile.y + 0.5*Tile.side_length,
 					tile.x - 0.866*Tile.side_length, tile.y - 0.5*Tile.side_length]		
-		tile.gui_id = self.canvas.create_polygon(points, outline='black', fill=background_colour, width=2)
+		tile.gui_id = self.canvas.create_polygon(points, outline='black', fill=tile.colour, width=2)
 		tile.was_plotted = True
 
 
@@ -122,7 +122,12 @@ class WindowHandler:
 
 		for tile in tiles:
 				tile.gui_active = True
-				self.plotTile(tile, self.getColourOfTile(tile))
+
+				#set fill colour of tiles that were created in previous _moveMap_
+				if not tile.was_plotted:
+					self.setColourOfTile(tile)
+
+				self.plotTile(tile)
 				for river in tile.rivers:
 					river.setCoords(tile)
 					self.plotRiver(river)
@@ -140,9 +145,9 @@ class WindowHandler:
 	def moveMap(self, mapObject :Map, dx :float, dy :float):
 		'''
 		Moves the plotted tiles in the specified direction.
-		@mapObject ... Map object which contains the tiles that are being moved.
-		@dx ... The x coordinate of the moving direction vector.
-		@dy ... The y coordinate of the moving direction vector.
+		@mapObject (Map) ... Map object which contains the tiles that are being moved.
+		@dx (float) ... The x coordinate of the moving direction vector.
+		@dy (float) ... The y coordinate of the moving direction vector.
 		'''
 
 		to_activate = set()
@@ -151,7 +156,7 @@ class WindowHandler:
 
 		#go through every tile which is currently visible on-screen
 		for tile in mapObject.tileIterator(active_only=True):
-			
+
 			#move the tile's coordinates
 			tile.x += dx
 			tile.y += dy
@@ -206,10 +211,9 @@ class WindowHandler:
 		mapObject.updateCentreTile(self.canv_width / 2, self.canv_height / 2)
 
 
-	def getColourOfTile(self, tile :Tile) -> str:
+	def setColourOfTile(self, tile :Tile):
 		'''
-		Returns the plotting fill colour based on the @tile attributes.
-		@tile ... Tile object for which the colour is being chosen.
+		Sets the @tile's (Tile) fill colour based on the @tile attributes.
 		'''
 
 		mapping = ['7','5','3','1']
@@ -217,13 +221,13 @@ class WindowHandler:
 
 		#ocean
 		if tile.altitude < 0:
-			return "#0022BB"
+			tile.colour = "#0022BB"
 		elif tile.is_lake:
-			return "#0022BB"
+			tile.colour = "#0022BB"
 		#mountains
 		elif tile.altitude > 0.45:
-			return "#AAAAAA"
+			tile.colour = "#AAAAAA"
 		elif tile.altitude > 0.3:
-			return "#444444"
+			tile.colour = "#444444"
 		else:
-			return "#00" + mapping[brightness] + "000"
+			tile.colour = "#00" + mapping[brightness] + "000"

@@ -62,9 +62,6 @@ class Tile:
 		self.x = None
 		self.y = None
 
-		#fill colour of the tile
-		self.colour = "#FFFFFF"
-
 		#tkinter-canvas hexagon object
 		self.gui_id = None
 
@@ -76,6 +73,9 @@ class Tile:
 
 		#was ever plotted
 		self.was_plotted = False
+
+		#plot fill colour
+		self.colour = None
 
 
 	def getExistingNeighbours(self) -> dict:
@@ -104,18 +104,18 @@ class Tile:
 		return False
 
 
-	def setRelativeCoordinates(self, tile, side):
+	def setRelativeCoordinates(self, tile, side :str):
 		'''
-		Sets this tile's coordinates based on the @tile coordinates, which has this tile on it's @side side.
+		Sets this tile's coordinates based on the @tile (Tile) coordinates, which has this tile on it's @side (str) side.
 		'''
 
 		self.x = tile.x + Tile.delta_xs[side] * Tile.side_length
 		self.y = tile.y + Tile.delta_ys[side] * Tile.side_length
 
 
-	def bindTile(self, tile, side):
+	def bindTile(self, tile, side :str):
 		'''
-		Connects @tile to this tile's @side (and vice versa). 
+		Connects @tile (Tile) to this tile's @side (str) (and vice versa). 
 		'''
 		
 		self.neighbours[side] = tile
@@ -128,11 +128,11 @@ class Map:
 	Class representing the main map.
 	'''
 
-	def __init__(self, centre_x :int, centre_y :int):
+	def __init__(self, centre_x :float, centre_y :float):
 		'''
 		Constructor of Map class.
-		@centre_x (int) ... x coordinate of the GUI canvas' centre.
-		@centre_y (int) ... y coordinate of the GUI canvas' centre.
+		@centre_x (float) ... x coordinate of the GUI canvas' centre.
+		@centre_y (float) ... y coordinate of the GUI canvas' centre.
 		'''
 
 		#the nearest tile to the canvas' centre
@@ -148,7 +148,7 @@ class Map:
 							}
 
 
-	def tileIterator(self, active_only = False):
+	def tileIterator(self, active_only :bool = False):
 		'''
 		Iterator of the map tiles, which iterates over the whole map, or over the currently plotted tiles only, depending on the value of @active_only (bool).
 		'''
@@ -183,8 +183,8 @@ class Map:
 	def updateCentreTile(self, centre_x :float, centre_y :float):
 		'''
 		Checks, whether there is a tile that is closer to the canvas centre than the current centre_tile. If there is that tile, it becomes map's new centre_tile.
-		@centre_x ... Canvas' centre x position.
-		@centre_y ... Canvas' centre y position.
+		@centre_x (float) ... Canvas' centre x position.
+		@centre_y (float) ... Canvas' centre y position.
 		'''
 
 		#squared standard euclidean distance from the canvas' centre

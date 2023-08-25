@@ -41,7 +41,7 @@ class RiverVertex:
 
 class RiverSegment:
 	'''
-	Class representing river parts which are not its boundaries.
+	Class representing those river parts which are not its endings.
 	'''
 
 	def __init__(self):
